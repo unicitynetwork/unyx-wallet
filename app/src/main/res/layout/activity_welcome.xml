@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/welcome_bg">
+
+    <!-- Welcome to txt -->
+    <TextView
+        android:id="@+id/tvWelcome"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Welcome to"
+        android:textColor="#80FFFFFF"
+        android:textSize="32sp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="200dp"/>
+
+    <!-- Unicity Wallet txt -->
+    <TextView
+        android:id="@+id/tvAppName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Unicity Wallet"
+        android:textColor="@android:color/white"
+        android:textSize="40sp"
+        android:textStyle="bold"
+        android:layout_below="@id/tvWelcome"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="8dp"/>
+
+    <!-- Create Wallet Btn-->
+    <Button
+        android:id="@+id/btnCreateWallet"
+        android:layout_width="280dp"
+        android:layout_height="50dp"
+        android:text="Create Wallet"
+        android:textStyle="bold"
+        android:background="@drawable/btn_green_rounded"
+        android:textColor="#262626"
+        android:layout_below="@id/tvAppName"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="60dp"
+        android:textAllCaps="false"
+        android:textSize="18sp"/>
+
+    <!-- Recover Wallet Btn -->
+    <Button
+        android:id="@+id/btnRecoverWallet"
+        android:layout_width="280dp"
+        android:layout_height="50dp"
+        android:text="Recover Wallet"
+        android:textStyle="bold"
+        android:textColor="@android:color/white"
+        android:layout_below="@id/btnCreateWallet"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/btn_white_border"
+        android:textAllCaps="false"
+        android:textSize="18sp"/>
+</RelativeLayout>

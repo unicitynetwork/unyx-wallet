@@ -1,0 +1,28 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Базовый фон: глубокий чёрный снизу -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="315"
+                android:startColor="#09090B"
+                android:centerColor="#09090B"
+                android:endColor="#C9FF19"
+            />
+        </shape>
+    </item>
+
+    <!-- Доп. затемнение, чтобы низ был насыщенно чёрный -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="90"
+            android:startColor="#00000000"
+            android:endColor="#CC000000"
+            />
+        </shape>
+    </item>
+
+</layer-list>

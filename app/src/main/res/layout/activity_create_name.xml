@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/welcome_bg"
+    android:padding="38dp">
+    <!-- Create your txt -->
+    <TextView
+        android:id="@+id/tvWelcome"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Create your"
+        android:textColor="#80FFFFFF"
+        android:textSize="32sp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="180dp"/>
+
+    <!-- Unicity Name txt -->
+    <TextView
+        android:id="@+id/tvAppName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Unicity Name"
+        android:textColor="@android:color/white"
+        android:textSize="40sp"
+        android:textStyle="bold"
+        android:layout_below="@id/tvWelcome"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="1dp"/>
+
+    <TextView
+        android:id="@+id/tvInputLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Unicity Name"
+        android:textColor="#50FFFFFF"
+        android:textSize="14sp"
+        android:layout_below="@id/tvAppName"
+        android:layout_marginTop="39dp"
+        android:layout_marginStart="15dp"/>
+
+    <EditText
+        android:id="@+id/etUnicityName"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_below="@id/tvAppName"
+        android:layout_marginTop="60dp"
+        android:hint="Enter name here"
+        android:background="@drawable/et_bg"
+        android:paddingHorizontal="20dp"
+        android:textColor="@android:color/white"
+        android:textColorHint="#80FFFFFF"
+        android:inputType="textPersonName"/>
+
+    <Button
+        android:id="@+id/btnContinue"
+        android:layout_width="280dp"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/etUnicityName"
+        android:layout_marginTop="28dp"
+        android:background="@drawable/btn_green_rounded"
+        android:text="Continue"
+        android:textColor="#262626"
+        android:layout_centerHorizontal="true"
+        android:textStyle="bold"
+        android:textAllCaps="false"
+        android:textSize="18sp"/>
+
+</RelativeLayout>
