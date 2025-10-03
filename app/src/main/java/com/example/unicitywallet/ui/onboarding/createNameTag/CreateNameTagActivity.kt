@@ -7,6 +7,7 @@ import com.example.unicitywallet.R
 import android.widget.Button
 import android.widget.EditText
 import android.util.Log
+import android.view.View
 import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import com.example.unicitywallet.identity.IdentityManager
@@ -21,26 +22,27 @@ import org.unicitylabs.sdk.token.TokenId
 import org.unicitylabs.sdk.token.TokenType
 import java.security.SecureRandom
 import androidx.core.content.edit
+import com.example.unicitywallet.databinding.ActivityCreateNameBinding
+import com.example.unicitywallet.databinding.ActivityWelcomeBinding
 import com.example.unicitywallet.ui.wallet.WalletActivity
 
 class CreateNameTagActivity : AppCompatActivity() {
     private lateinit var nametagService: NametagService
     private lateinit var identityManager: IdentityManager
+    private lateinit var binding: ActivityCreateNameBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_create_name)
+        binding = ActivityCreateNameBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         nametagService = NametagService(applicationContext)
         identityManager = IdentityManager(applicationContext)
 
-        val etName = findViewById<EditText>(R.id.etUnicityName)
-        val btnContinue = findViewById<Button>(R.id.btnContinue)
-
         val sharedPrefs = getSharedPreferences("UnicityWalletPrefs", MODE_PRIVATE)
 
-        btnContinue.setOnClickListener {
-            val nametag = etName.text.toString().trim()
+        binding.btnContinue.setOnClickListener {
+            val nametag = binding.etUnicityName.text.toString().trim()
             if(nametag.isEmpty()){
                 Toast.makeText(this, "Please enter a Unicity tag", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -109,6 +111,7 @@ class CreateNameTagActivity : AppCompatActivity() {
 
     private suspend fun mintNametag(nametag: String) {
         try {
+            showLoading(true)
             val address = getWalletAddress()
             if (address != null){
                 val nametagToken = nametagService.mintNameTag(nametag, address)
@@ -122,7 +125,21 @@ class CreateNameTagActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             Toast.makeText(this, "Failed to mint nametag: ${e.message}", Toast.LENGTH_LONG).show()
+        } finally {
+            showLoading(false)
         }
 
+    }
+
+    private fun showLoading(isLoading: Boolean) {
+        if(isLoading) {
+            binding.btnContinue.text = ""
+            binding.btnContinue.isEnabled = false
+            binding.btnProgress.visibility = View.VISIBLE
+        } else {
+            binding.btnContinue.text = "Continue"
+            binding.btnContinue.isEnabled = true
+            binding.btnProgress.visibility = View.GONE
+        }
     }
 }
