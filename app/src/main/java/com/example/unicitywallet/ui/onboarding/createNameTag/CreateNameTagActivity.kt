@@ -24,7 +24,9 @@ import java.security.SecureRandom
 import androidx.core.content.edit
 import com.example.unicitywallet.databinding.ActivityCreateNameBinding
 import com.example.unicitywallet.databinding.ActivityWelcomeBinding
+import com.example.unicitywallet.nostr.NostrP2PService
 import com.example.unicitywallet.ui.wallet.WalletActivity
+import kotlin.toString
 
 class CreateNameTagActivity : AppCompatActivity() {
     private lateinit var nametagService: NametagService
@@ -73,36 +75,9 @@ class CreateNameTagActivity : AppCompatActivity() {
 
     private suspend fun getWalletAddress(): DirectAddress? {
         return try {
-            // Get the identity from IdentityManager
-            val identity = identityManager.getCurrentIdentity()
-            if (identity == null) {
-                Log.e("CreateNameTagActivity", "No identity found")
-                return null
-            }
-
-            // Convert hex strings to byte arrays
-            val secret = hexToBytes(identity.privateKey)
-            val nonce = hexToBytes(identity.nonce)
-
-            // Create signing service and predicate
-            val signingService = SigningService.createFromSecret(secret)
-
-            // Use the chain's token type for the address
-            val tokenType = TokenType(hexToBytes(WalletConstants.UNICITY_TOKEN_TYPE))
-            val tokenId = TokenId(ByteArray(32).apply {
-                SecureRandom().nextBytes(this)
-            })
-
-            val predicate = UnmaskedPredicate.create(
-                tokenId,
-                tokenType,
-                signingService,
-                HashAlgorithm.SHA256,
-                nonce
-            )
-
-            // Return the address
-            predicate.reference.toAddress()
+            // Get the wallet's direct address from IdentityManager
+            // This uses UnmaskedPredicateReference without TokenId
+            identityManager.getWalletAddress()
         } catch (e: Exception) {
             Log.e("UserProfileActivity", "Error getting wallet address", e)
             null
@@ -116,9 +91,47 @@ class CreateNameTagActivity : AppCompatActivity() {
             if (address != null){
                 val nametagToken = nametagService.mintNameTag(nametag, address)
                 if(nametagToken != null){
-                    Toast.makeText(this, "Unicity tag saved: $nametag (displays as $nametag@unicity)", Toast.LENGTH_SHORT).show()
-                    startActivity(Intent(this@CreateNameTagActivity, WalletActivity::class.java))
-                    finish()
+                    try {
+                        val nostrService = NostrP2PService.getInstance(this)
+                        if(nostrService != null){
+                            // Start the service if not running
+                            if (!nostrService.isRunning()) {
+                                Log.d("CreateNametagActivity", "Starting Nostr service for binding publication...")
+                                nostrService.start()
+                                // Wait for connection to establish
+                                kotlinx.coroutines.delay(3000)
+                                Log.d("CreateNametagActivity", "Nostr service connection delay complete")
+                            }
+
+                            val proxyAddress = nametagService.getProxyAddress(nametagToken)
+                            Log.d("CreateNametagActivity", "Publishing nametag binding: $nametag -> $proxyAddress")
+
+                            val published = nostrService.publishNametagBinding(
+                                nametagId = nametag,
+                                unicityAddress = proxyAddress.toString()
+                            )
+
+                            if (published) {
+                                Log.d("CreateNametagActivity", "✅ Nametag binding published successfully!")
+                                runOnUiThread {
+                                    Toast.makeText(this, "Nametag binding published! You can now receive tokens.", Toast.LENGTH_LONG).show()
+                                }
+                                startActivity(Intent(this@CreateNameTagActivity, WalletActivity::class.java))
+                                finish()
+                            } else {
+                                Log.w("CreateNametagActivity", "❌ Failed to publish nametag binding")
+                                runOnUiThread {
+                                    Toast.makeText(this, "Warning: Nametag binding may not have published", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+
+                        } else {
+                            Log.w("CreateNametagActivity", "Nostr service not available, skipping nametag binding")
+                        }
+                    } catch (e: Exception) {
+                        Log.e("CreateNametagActivity", "Error publishing nametag binding", e)
+                    }
+//                    Toast.makeText(this, "Unicity tag saved: $nametag (displays as $nametag@unicity)", Toast.LENGTH_SHORT).show()
                 }
             } else {
                 Log.d("CreateNameTagActivity", "Wallet is not set up")

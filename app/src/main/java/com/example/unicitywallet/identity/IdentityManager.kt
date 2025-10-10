@@ -29,6 +29,8 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 import androidx.core.content.edit
+import org.unicitylabs.sdk.address.DirectAddress
+import org.unicitylabs.sdk.predicate.embedded.UnmaskedPredicateReference
 
 class IdentityManager(context: Context) {
     companion object {
@@ -86,6 +88,24 @@ class IdentityManager(context: Context) {
         } else {
             null
         }
+    }
+
+    suspend fun getWalletAddress(): DirectAddress? = withContext(Dispatchers.IO) {
+        val identity = getCurrentIdentity() ?: return@withContext null
+
+        val secret = hexToBytes(identity.privateKey)
+
+        val signingService = SigningService.createFromSecret(secret)
+
+        val tokenType = TokenType(hexToBytes(WalletConstants.UNICITY_TOKEN_TYPE))
+
+        val predicateRef = UnmaskedPredicateReference.create(
+            tokenType,
+            signingService,
+            HashAlgorithm.SHA256
+        )
+
+        predicateRef.toAddress()
     }
 
     suspend fun getSeedPhrase(): List<String>? = withContext(Dispatchers.IO) {

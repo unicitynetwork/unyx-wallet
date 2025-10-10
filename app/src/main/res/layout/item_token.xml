@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="72dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingVertical="8dp">
+
+    <!-- Token Icon -->
+    <ImageView
+        android:id="@+id/imgTokenIcon"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_marginEnd="12dp"
+        android:scaleType="centerInside" />
+
+    <!-- Left Part: Name and Ticker -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvTokenName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Bitcoin"
+            android:textColor="@android:color/white"
+            android:fontFamily="@font/inter_semibold"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tvTokenSymbol"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="BTC · $111,220.1"
+            android:textColor="#80FFFFFF"
+            android:fontFamily="@font/inter_semibold"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Right Part: value and % change -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="end">
+
+        <TextView
+            android:id="@+id/tvTokenValue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="$11,220.1"
+            android:textColor="@android:color/white"
+            android:fontFamily="@font/inter_semibold"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/tvTokenChange"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="+1.47%"
+            android:textColor="#00FF7F"
+            android:textSize="13sp"
+            android:fontFamily="@font/inter_medium" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Spacing -->
+    <dimen name="spacing_xs">4dp</dimen>
+    <dimen name="spacing_sm">8dp</dimen>
+    <dimen name="spacing_md">16dp</dimen>
+    <dimen name="spacing_lg">24dp</dimen>
+    <dimen name="spacing_xl">32dp</dimen>
+    <dimen name="spacing_xxl">48dp</dimen>
+
+    <!-- Padding -->
+    <dimen name="padding_xs">4dp</dimen>
+    <dimen name="padding_sm">8dp</dimen>
+    <dimen name="padding_md">16dp</dimen>
+    <dimen name="padding_lg">24dp</dimen>
+    <dimen name="padding_xl">32dp</dimen>
+
+    <!-- Margins -->
+    <dimen name="margin_xs">4dp</dimen>
+    <dimen name="margin_sm">8dp</dimen>
+    <dimen name="margin_md">16dp</dimen>
+    <dimen name="margin_lg">24dp</dimen>
+    <dimen name="margin_xl">32dp</dimen>
+
+    <!-- Corner Radius -->
+    <dimen name="corner_radius_sm">4dp</dimen>
+    <dimen name="corner_radius_md">8dp</dimen>
+    <dimen name="corner_radius_lg">12dp</dimen>
+    <dimen name="corner_radius_xl">16dp</dimen>
+    <dimen name="corner_radius_xxl">24dp</dimen>
+
+    <!-- Elevation -->
+    <dimen name="elevation_sm">2dp</dimen>
+    <dimen name="elevation_md">4dp</dimen>
+    <dimen name="elevation_lg">8dp</dimen>
+    <dimen name="elevation_xl">12dp</dimen>
+
+    <!-- Button Dimensions -->
+    <dimen name="button_height">48dp</dimen>
+    <dimen name="button_height_large">56dp</dimen>
+    <dimen name="button_corner_radius">24dp</dimen>
+    <dimen name="button_padding_horizontal">24dp</dimen>
+
+    <!-- Card Dimensions -->
+    <dimen name="card_corner_radius">12dp</dimen>
+    <dimen name="card_elevation">4dp</dimen>
+    <dimen name="card_padding">16dp</dimen>
+    <dimen name="card_margin">8dp</dimen>
+
+    <!-- Icon Sizes -->
+    <dimen name="icon_size_sm">16dp</dimen>
+    <dimen name="icon_size_md">24dp</dimen>
+    <dimen name="icon_size_lg">32dp</dimen>
+    <dimen name="icon_size_xl">48dp</dimen>
+    <dimen name="icon_size_xxl">64dp</dimen>
+
+    <!-- Logo Sizes -->
+    <dimen name="logo_size_sm">32dp</dimen>
+    <dimen name="logo_size_md">48dp</dimen>
+    <dimen name="logo_size_lg">64dp</dimen>
+    <dimen name="logo_size_xl">96dp</dimen>
+
+    <!-- NFC Icon Size -->
+    <dimen name="nfc_icon_size">120dp</dimen>
+    <dimen name="nfc_icon_size_large">160dp</dimen>
+
+    <!-- Token Item Dimensions -->
+    <dimen name="token_item_height">72dp</dimen>
+    <dimen name="token_item_expanded_height">120dp</dimen>
+    <dimen name="token_icon_size">40dp</dimen>
+
+    <!-- Status Bar Height -->
+    <dimen name="status_bar_height">24dp</dimen>
+
+    <!-- Minimum Touch Target -->
+    <dimen name="min_touch_target">48dp</dimen>
+</resources>

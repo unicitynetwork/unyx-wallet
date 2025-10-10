@@ -7,12 +7,14 @@ import android.net.NetworkCapabilities
 import android.util.Log
 import cash.z.ecc.android.random.SecureRandom
 import com.example.unicitywallet.identity.IdentityManager
+import com.example.unicitywallet.utils.WalletConstants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.withContext
 import org.unicitylabs.sdk.StateTransitionClient
 import org.unicitylabs.sdk.address.DirectAddress
+import org.unicitylabs.sdk.address.ProxyAddress
 import org.unicitylabs.sdk.api.SubmitCommitmentResponse
 import org.unicitylabs.sdk.api.SubmitCommitmentStatus
 import org.unicitylabs.sdk.bft.RootTrustBase
@@ -25,6 +27,7 @@ import org.unicitylabs.sdk.token.TokenId
 import org.unicitylabs.sdk.token.TokenState
 import org.unicitylabs.sdk.token.TokenType
 import org.unicitylabs.sdk.transaction.MintCommitment
+import org.unicitylabs.sdk.transaction.MintTransactionData
 import org.unicitylabs.sdk.transaction.MintTransactionReason
 import org.unicitylabs.sdk.transaction.NametagMintTransactionData
 import org.unicitylabs.sdk.util.InclusionProofUtils
@@ -61,48 +64,44 @@ class NametagService(
     ): Token<*>? = withContext(Dispatchers.IO){
         try {
             Log.d(TAG, "Minting nametag: $nametag")
+
+            // Check network connectivity first
             if(!isNetworkAvailable()){
                 Log.e(TAG, "No network connection")
                 throw IllegalStateException("No network connection. Please check your internet connection")
             }
 
+            // Check if nametag already exists locally
             val existingNameTag = loadNameTag(nametag)
             if(existingNameTag != null) {
                 Log.d(TAG, "Nametag already exists locally: $nametag")
                 return@withContext existingNameTag
             }
 
-            val identity = identityManager.getCurrentIdentity() ?: throw IllegalStateException("No wallet identity found")
+            // Create deterministic token ID from nametag string
+            val nametagTokenId = TokenId.fromNameTag(nametag)
+
+            // Use the same token type for all tokens (from WalletConstants)
+            val identity = identityManager.getCurrentIdentity()
+                ?: throw IllegalStateException("No wallet identity found")
 
             val secret = hexToBytes(identity.privateKey)
-
             val signingService = SigningService.createFromSecret(secret)
+            val nametagTokenType = TokenType(hexToBytes(WalletConstants.UNICITY_TOKEN_TYPE))
 
-            val nametagTokenId = TokenId(ByteArray(32).apply {
-                SecureRandom().nextBytes(this)
-            })
-            val nametagTokenType = TokenType(ByteArray(32).apply {
-                SecureRandom().nextBytes(this)
-            })
-            val nonce = ByteArray(32).apply {
-                SecureRandom().nextBytes(this)
-            }
-            val nametagPredicate = UnmaskedPredicate.create(
-                nametagTokenId,
-                nametagTokenType,
-                signingService,
-                HashAlgorithm.SHA256,
-                nonce
-            )
+            // Get the wallet's direct address as the target for this nametag
+            val nametagAddress = identityManager.getWalletAddress()
+                ?: throw IllegalStateException("Failed to get wallet address")
 
-            val nametagAddress = nametagPredicate.reference.toAddress()
-
+            // Submit the mint commitment with retry logic
             var submitResponse: SubmitCommitmentResponse? = null
             var lastException: Exception? = null
             var mintCommitment: MintCommitment<NametagMintTransactionData<MintTransactionReason>>? = null
 
             for(attempt in 1..MAX_RETRY_ATTEMPTS){
                 try {
+                    // Generate new salt for each attempt to avoid REQUEST_ID_EXISTS
+                    // Salt is required (cannot be null) - use random bytes for uniqueness
                     val salt = ByteArray(32).apply {
                         SecureRandom().nextBytes(this)
                     }
@@ -167,7 +166,17 @@ class NametagService(
                 throw IllegalStateException("Failed to get inclusion proof: ${e.message}")
             }
 
-            val genesisTransaction = mintCommitment?.toTransaction(inclusionProof)
+            val genesisTransaction = mintCommitment!!.toTransaction(inclusionProof)
+
+            val mintSalt = (mintCommitment.transactionData as NametagMintTransactionData<MintTransactionReason>).salt
+
+            val nametagPredicate = UnmaskedPredicate.create(
+                nametagTokenId,
+                nametagTokenType,
+                signingService,
+                HashAlgorithm.SHA256,
+                mintSalt
+            )
 
             val trustBase = ServiceProvider.getRootTrustBase()
 
@@ -185,9 +194,9 @@ class NametagService(
                 throw e
             }
 
-            saveNametag(nametag, nametagToken, nonce)
-            Log.d(TAG, "Nametag minted and saved successfully: $nametag")
+            saveNametag(nametag, nametagToken)
 
+            Log.d(TAG, "Nametag minted and saved successfully: $nametag")
             return@withContext nametagToken
         } catch (e: Exception) {
             Log.e(TAG, "Error minting nametag: ${e.message}", e)
@@ -197,8 +206,7 @@ class NametagService(
 
     private fun saveNametag(
         nametag: String,
-        nametagToken: Token<*>,
-        nonce: ByteArray
+        nametagToken: Token<*>
     ) {
         try {
             val file = getNametagFile(nametag)
@@ -208,10 +216,9 @@ class NametagService(
             val nametagData = mapOf(
                 "nametag" to nametag,
                 "token" to UnicityObjectMapper.JSON.writeValueAsString(nametagToken),
-                "nonce" to nonce.encodeToString(),
                 "timestamp" to System.currentTimeMillis(),
                 "format" to "txf",
-                "version" to "1.0"
+                "version" to "2.0"
             )
 
             val jsonData = UnicityObjectMapper.JSON.writeValueAsString(nametagData)
@@ -244,7 +251,7 @@ class NametagService(
             }
 
             // Save the imported nametag
-            saveNametag(nametagString, token, nonce)
+            saveNametag(nametagString, token)
 
             Log.d(TAG, "Nametag imported successfully: $nametagString")
             return@withContext token
@@ -288,10 +295,6 @@ class NametagService(
         return File(nametagDir, filename)
     }
 
-    private fun ByteArray.encodeToString(): String {
-        return android.util.Base64.encodeToString(this, android.util.Base64.NO_WRAP)
-    }
-
     private fun hexToBytes(hex: String): ByteArray {
         val len = hex.length
         val data = ByteArray(len / 2)
@@ -301,4 +304,71 @@ class NametagService(
         return data
     }
 
+    suspend fun listAllNametags(): List<String> = withContext(Dispatchers.IO) {
+        try {
+            val nametagDir = File(context.filesDir, "nametags")
+            if (!nametagDir.exists()) {
+                return@withContext emptyList()
+            }
+
+            val nametagFiles = nametagDir.listFiles { file ->
+                file.name.startsWith(NAMETAG_FILE_PREFIX) &&
+                        file.name.endsWith(NAMETAG_FILE_SUFFIX)
+            } ?: return@withContext emptyList()
+
+            nametagFiles.mapNotNull { file ->
+                try {
+                    val jsonData = file.readText()
+                    val nametagData = UnicityObjectMapper.JSON.readTree(jsonData)
+                    nametagData.get("nametag")?.asText()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error reading nametag from file: ${file.name}", e)
+                    null
+                }
+            }.sorted()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error listing nametags: ${e.message}", e)
+            emptyList()
+        }
+    }
+
+    suspend fun getAllNametagTokens(): Map<String, Token<*>> = withContext(Dispatchers.IO) {
+        val result = mutableMapOf<String, Token<*>>()
+        val nametags = listAllNametags()
+
+        nametags.forEach { nametag ->
+            loadNametag(nametag)?.let { token ->
+                result[nametag] = token
+            }
+        }
+
+        result
+    }
+
+    suspend fun loadNametag(nametagString: String): Token<*>? = withContext(Dispatchers.IO) {
+        try {
+            val file = getNametagFile(nametagString)
+            if (!file.exists()) {
+                return@withContext null
+            }
+
+            val jsonData = file.readText()
+            val nametagData = UnicityObjectMapper.JSON.readTree(jsonData)
+
+            // Extract token data - it's stored as a string, not an object
+            val tokenJson = nametagData.get("token").asText()
+            val token = UnicityObjectMapper.JSON.readValue(tokenJson, Token::class.java)
+
+            Log.d(TAG, "Nametag loaded from storage: $nametagString")
+            return@withContext token
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading nametag: ${e.message}", e)
+            return@withContext null
+        }
+    }
+
+    fun getProxyAddress(nametagToken: Token<*>): ProxyAddress {
+        return ProxyAddress.create(nametagToken.id)
+    }
 }

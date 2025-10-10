@@ -8,4 +8,31 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="green">#A8FF78</color>
+    <color name="background">#F5F5F5</color>
+    <color name="text_primary">#000000</color>
+    <color name="text_secondary">#4A4A4A</color>
+
+    <!--For value changes-->
+    <color name="green_positive">#7DFF83</color>
+    <color name="green_positive_bg">#3077F57B</color>
+    <color name="red_negative">#FF694E</color>\
+    <color name="red_negative_bg">#24FF4242</color>
+
+    <!-- Additional UI Colors -->
+    <color name="primary_blue">#4169E1</color>
+    <color name="purple_accent">#6200EE</color>
+
+    <!-- Card Colors -->
+    <color name="card_background">#FFFFFF</color>
+
+    <!-- Button Colors -->
+    <color name="button_primary">#000000</color>
+
+    <!-- Text Colors -->
+    <color name="text_on_dark">#FFFFFF</color>
+    <color name="text_tertiary">#9E9E9E</color>
+
+    <!-- Bottom Navigation Colors -->
+    <color name="active_tab">#C9FF4C</color>
+    <color name="inactive_tab">#70FFFFFF</color>
 </resources>
