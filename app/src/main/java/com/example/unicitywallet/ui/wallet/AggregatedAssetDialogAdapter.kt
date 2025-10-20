@@ -47,7 +47,7 @@ class AggregatedAssetDialogAdapter(
             }
 
             assetName.text = (asset.name ?: asset.symbol).replaceFirstChar { it.uppercase() }
-            assetSymbol.text = "${asset.symbol} · ${asset.getFormattedAmount()}"
+            assetSymbol.text = "${asset.getFormattedAmount()} ${asset.symbol}"
 
             itemView.setOnClickListener {
                 onAssetClick(asset)

@@ -112,11 +112,11 @@ class NostrTestActivity : AppCompatActivity() {
                 statusText.text = "Nostr Status: Connecting..."
 
                 // Get public key
-                val keyManager = NostrKeyManager(this@NostrTestActivity)
+                val keyManager = NostrKeyManagerAdapter(this@NostrTestActivity)
                 keyManager.initializeKeys()
 
                 val publicKey = keyManager.getPublicKey()
-                val npub = keyManager.toBech32PublicKey()
+                val npub = keyManager.getSdkKeyManager().npub
 
                 withContext(Dispatchers.Main) {
                     publicKeyText.text = "Public Key:\nHex: $publicKey\nNpub: $npub"
@@ -177,7 +177,7 @@ class NostrTestActivity : AppCompatActivity() {
     private fun testEncryption() {
         scope.launch {
             try {
-                val keyManager = NostrKeyManager(this@NostrTestActivity)
+                val keyManager = NostrKeyManagerAdapter(this@NostrTestActivity)
                 keyManager.initializeKeys()
 
                 // Test message
@@ -186,11 +186,11 @@ class NostrTestActivity : AppCompatActivity() {
                 // Use our own public key for testing (encrypt to ourselves)
                 val ourPublicKey = keyManager.getPublicKeyBytes()
 
-                // Encrypt
+                // Encrypt (SDK auto-compresses large messages)
                 val encrypted = keyManager.encryptMessage(testMessage, ourPublicKey)
                 Log.d(TAG, "Encrypted message: $encrypted")
 
-                // Decrypt
+                // Decrypt (SDK auto-decompresses)
                 val decrypted = keyManager.decryptMessage(encrypted, ourPublicKey)
                 Log.d(TAG, "Decrypted message: $decrypted")
 

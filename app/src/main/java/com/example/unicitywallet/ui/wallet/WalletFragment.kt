@@ -1,7 +1,9 @@
 package com.example.unicitywallet.ui.wallet
 
+import android.app.Dialog
 import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Context.VIBRATOR_SERVICE
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.drawable.GradientDrawable
@@ -9,15 +11,15 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.view.animation.OvershootInterpolator
-import android.widget.ArrayAdapter
-import android.widget.AutoCompleteTextView
 import android.widget.FrameLayout
-import android.widget.ImageButton
-import android.widget.ImageView
+import android.widget.Button
+import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -36,6 +38,9 @@ import com.example.unicitywallet.databinding.FragmentWalletBinding
 import com.example.unicitywallet.identity.IdentityManager
 import com.example.unicitywallet.nostr.NostrP2PService
 import com.example.unicitywallet.services.ServiceProvider
+import com.example.unicitywallet.transfer.TokenSplitCalculator
+import com.example.unicitywallet.transfer.TokenSplitExecutor
+import com.example.unicitywallet.transfer.toHexString
 import com.example.unicitywallet.viewmodel.WalletViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -313,7 +318,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 // Check if contact has @unicity tag
                 if (selectedContact.hasUnicityTag()) {
                     // After contact is selected, show asset selection dialog
-                    showAssetSelectionDialog(selectedContact)
+                    showCryptoSelectionForRecipient(selectedContact)
                 } else {
                     // Show warning for non-@unicity contacts
                     AlertDialog.Builder(requireContext())
@@ -333,62 +338,6 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
         currentContactDialog?.show()
     }
 
-    private fun showAssetSelectionDialog(recipient: Contact) {
-        try {
-            Log.d("WalletFragment", "showAssetSelectionDialog called with recipient: ${recipient.name}")
-
-            val dialogView = layoutInflater.inflate(R.layout.dialog_send_asset, null)
-
-            val dialog = AlertDialog.Builder(requireContext())
-                .setView(dialogView)
-                .create()
-
-            // Setup recipient info
-            val recipientName = dialogView.findViewById<TextView>(R.id.recipientName)
-            val recipientAddress = dialogView.findViewById<TextView>(R.id.recipientAddress)
-            val recipientBadge = dialogView.findViewById<ImageView>(R.id.recipientUnicityBadge)
-
-            recipientName.text = recipient.name
-            recipientAddress.text = recipient.address
-            recipientBadge.visibility = if (recipient.hasUnicityTag()) View.VISIBLE else View.GONE
-
-            // Setup close button
-            val btnClose = dialogView.findViewById<ImageButton>(R.id.btnClose)
-            btnClose.setOnClickListener {
-                dialog.dismiss()
-            }
-
-            // Setup asset selector
-            val assetSelector = dialogView.findViewById<AutoCompleteTextView>(R.id.assetSelector)
-            val assetNames = listOf("Bitcoin", "Ethereum", "eNaira", "eFranc")
-            val assetAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, assetNames)
-            assetSelector.setAdapter(assetAdapter)
-
-            val availableBalanceText = dialogView.findViewById<TextView>(R.id.availableBalanceText)
-            assetSelector.setOnItemClickListener { _, _, position, _ ->
-                val selectedAsset = assetNames[position]
-                when (selectedAsset) {
-                    "Bitcoin" -> availableBalanceText.text = "Available: 0.025 BTC"
-                    "Ethereum" -> availableBalanceText.text = "Available: 1.5 ETH"
-                    "eNaira" -> availableBalanceText.text = "Available: 50,000 NGN"
-                    "eFranc" -> availableBalanceText.text = "Available: 25,000 XAF"
-                    else -> availableBalanceText.text = "Available balance will be shown when token is selected"
-                }
-            }
-
-            // Replace the send button logic with crypto selection
-            val btnSend = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSend)
-            btnSend.visibility = View.GONE // Hide the old send button
-
-            // Show crypto selection dialog immediately
-            dialog.dismiss()
-            showCryptoSelectionForRecipient(recipient)
-        } catch (e: Exception) {
-            Log.e("WalletFragment", "Error showing asset selection dialog", e)
-            Toast.makeText(requireContext(), "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-        }
-    }
-
     private fun showCryptoSelectionForRecipient(recipient: Contact) {
         val assets = viewModel.aggregatedAssets.value
 
@@ -406,18 +355,20 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
         // Create custom dialog
         val dialogView = layoutInflater.inflate(R.layout.dialog_select_asset, null)
         val recyclerView = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvAssets)
-        val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+        val btnCancel = dialogView.findViewById<Button>(R.id.btnCancel)
 
         // Setup RecyclerView
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
 
-        val dialog = AlertDialog.Builder(requireContext())
-            .setView(dialogView)
-            .create()
+        val dialog = Dialog(requireContext(), R.style.FullScreenDialog)
+        dialog.setContentView(dialogView)
 
         val adapter = AggregatedAssetDialogAdapter(assets) { selectedAsset ->
-            dialog.dismiss()
             showAssetSendAmountDialog(selectedAsset, recipient)
+
+            Handler(Looper.getMainLooper()).postDelayed({
+                dialog.dismiss()
+            }, 50)
         }
 
         recyclerView.adapter = adapter
@@ -439,28 +390,378 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
             return
         }
 
-        // If only one token, skip picker and transfer immediately
-        if (tokensForCoin.size == 1) {
-            sendTokenViaNostr(tokensForCoin[0], selectedContact)
-            return
-        }
+        val dialogView = layoutInflater.inflate(R.layout.dialog_amount_input, null)
+        val etAmount = dialogView.findViewById<EditText>(R.id.etAmount)
+        val tvBalance = dialogView.findViewById<TextView>(R.id.tvBalance)
+        val btnSend = dialogView.findViewById<Button>(R.id.btnSend)
+        val btnCancel = dialogView.findViewById<Button>(R.id.btnCancel)
 
-        // Show token selection dialog
-        val tokenDescriptions = tokensForCoin.mapIndexed { index, token ->
-            val amount = token.amount ?: 0
-            val formattedAmount = amount.toDouble() / Math.pow(10.0, asset.decimals.toDouble())
-            "Token #${index + 1}: $formattedAmount ${asset.symbol}"
-        }
+        val formattedBalance = asset.getFormattedAmount()
+        tvBalance.text = "Balance: $formattedBalance ${asset.symbol}"
 
-        AlertDialog.Builder(requireContext())
-            .setTitle("Select Token to Send")
-            .setItems(tokenDescriptions.toTypedArray()) { dialog, which ->
-                val selectedToken = tokensForCoin[which]
-                // Proceed with transfer
-                sendTokenViaNostr(selectedToken, selectedContact)
+        val dialog = Dialog(requireContext(), R.style.FullScreenDialog)
+        dialog.setContentView(dialogView)
+
+        btnSend.setOnClickListener {
+            val amountStr = etAmount.text.toString()
+            if(amountStr.isNotEmpty()){
+                try {
+                    val amountDecimal = java.math.BigDecimal(amountStr)
+                    val multiplier = java.math.BigDecimal.TEN.pow(asset.decimals)
+                    val amountInSmallestUnitBD = amountDecimal.multiply(multiplier)
+                    val amountInSmallestUnit = amountInSmallestUnitBD.toBigInteger()
+
+                    if (amountInSmallestUnit <= java.math.BigInteger.ZERO) {
+                        Toast.makeText(requireContext(), "Please enter a valid amount", Toast.LENGTH_SHORT).show()
+                        return@setOnClickListener
+                    }
+
+                    val totalBalanceBigInt = asset.getAmountAsBigInteger()
+                    if (amountInSmallestUnit > totalBalanceBigInt) {
+                        Toast.makeText(requireContext(), "Insufficient balance", Toast.LENGTH_SHORT).show()
+                        return@setOnClickListener
+                    }
+
+                    sendTokensWithSplitting(
+                        tokensForCoin = tokensForCoin,
+                        targetAmount = amountInSmallestUnit,
+                        asset = asset,
+                        recipient = selectedContact
+                    )
+
+                    dialog.dismiss()
+                } catch (e: NumberFormatException) {
+                    Toast.makeText(requireContext(), "Invalid amount", Toast.LENGTH_SHORT).show()
+                }
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+        }
+
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
+
+    }
+
+    private fun sendTokensWithSplitting(
+        tokensForCoin: List<Token>,
+        targetAmount: java.math.BigInteger,
+        asset: AggregatedAsset,
+        recipient: Contact
+    ) {
+        lifecycleScope.launch {
+            // Show progress dialog (outside try so it's always accessible for dismiss)
+            val progressDialog = android.app.ProgressDialog(requireContext()).apply {
+                setTitle("Processing Transfer")
+                setMessage("Calculating optimal transfer strategy...")
+                setCancelable(false)
+                show()
+            }
+
+            try {
+
+                // Step 1: Calculate optimal split plan
+                val calculator = TokenSplitCalculator()
+
+                Log.d("WalletFragment", "=== Starting split calculation ===")
+                Log.d("WalletFragment", "Target amount: $targetAmount")
+                Log.d("WalletFragment", "Asset coinId (hex string): ${asset.coinId}")
+                Log.d("WalletFragment", "Available tokens: ${tokensForCoin.size}")
+
+                // Convert hex string coinId to bytes (not UTF-8 bytes of the string!)
+                val coinId = org.unicitylabs.sdk.token.fungible.CoinId(hexStringToByteArray(asset.coinId))
+                Log.d("WalletFragment", "CoinId bytes: ${coinId.bytes.joinToString { it.toString() }}")
+
+                // Convert wallet tokens to SDK tokens
+                val sdkTokens = tokensForCoin.mapNotNull { token ->
+                    try {
+                        val sdkToken = UnicityObjectMapper.JSON.readValue(
+                            token.jsonData,
+                            org.unicitylabs.sdk.token.Token::class.java
+                        )
+                        Log.d("WalletFragment", "Parsed SDK token: id=${sdkToken.id.toHexString().take(8)}...")
+                        val coins = sdkToken.getCoins()
+                        if (coins.isPresent) {
+                            Log.d("WalletFragment", "Token has coins: ${coins.get().coins}")
+                        } else {
+                            Log.d("WalletFragment", "Token has NO coins!")
+                        }
+                        sdkToken
+                    } catch (e: Exception) {
+                        Log.e("WalletFragment", "Failed to parse token: ${e.message}", e)
+                        null
+                    }
+                }
+
+                Log.d("WalletFragment", "Successfully parsed ${sdkTokens.size} SDK tokens")
+
+                // Calculate total available balance
+                val totalAvailable = sdkTokens.mapNotNull { token ->
+                    val coins = token.getCoins()
+                    if (coins.isPresent) {
+                        coins.get().coins[coinId]
+                    } else null
+                }.fold(java.math.BigInteger.ZERO) { acc, amount -> acc.add(amount) }
+
+                Log.d("WalletFragment", "Total available: $totalAvailable, requested: $targetAmount")
+
+                // Check if insufficient balance BEFORE calling calculator
+                if (totalAvailable < targetAmount) {
+                    progressDialog.dismiss()
+                    val availableDecimal = java.math.BigDecimal(totalAvailable).divide(java.math.BigDecimal.TEN.pow(asset.decimals)).stripTrailingZeros()
+                    val requestedDecimal = java.math.BigDecimal(targetAmount).divide(java.math.BigDecimal.TEN.pow(asset.decimals)).stripTrailingZeros()
+                    val message = "Insufficient balance!\n\nRequested: $requestedDecimal ${asset.symbol}\nAvailable: $availableDecimal ${asset.symbol}"
+                    Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
+                    Log.e("WalletFragment", "Insufficient balance: requested=$requestedDecimal, available=$availableDecimal")
+                    return@launch
+                }
+
+                val splitPlan = calculator.calculateOptimalSplit(sdkTokens, targetAmount, coinId)
+
+                if (splitPlan == null) {
+                    progressDialog.dismiss()
+                    Log.e("WalletFragment", "Split calculator returned null - unexpected!")
+                    Toast.makeText(requireContext(), "Cannot create transfer plan. This should not happen - check logs.", Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+
+                Log.d("WalletFragment", "Split plan created: ${splitPlan.describe()}")
+
+                // Step 2: Extract recipient nametag
+                val recipientNametag = recipient.address
+                    ?.removePrefix("@")
+                    ?.removeSuffix("@unicity")
+                    ?.trim()
+
+                if (recipientNametag.isNullOrEmpty()) {
+                    progressDialog.dismiss()
+                    Toast.makeText(requireContext(), "Invalid recipient nametag", Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+
+                // Step 3: Create recipient proxy address
+                val recipientTokenId = TokenId.fromNameTag(recipientNametag)
+                val recipientProxyAddress = ProxyAddress.create(recipientTokenId)
+
+                // Step 4: Get signing service
+                val identityManager = IdentityManager(requireContext())
+                val identity = identityManager.getCurrentIdentity()
+                if (identity == null) {
+                    progressDialog.dismiss()
+                    Toast.makeText(requireContext(), "Wallet identity not found", Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+
+                val secret = hexStringToByteArray(identity.privateKey)
+                val signingService = SigningService.createFromSecret(secret)
+
+                // Step 5: Execute split if needed
+                val tokensToTransfer = mutableListOf<org.unicitylabs.sdk.token.Token<*>>()
+                var successCount = 0 // Track successful regular transfers
+                var splitResult: TokenSplitExecutor.SplitExecutionResult? = null
+
+                // Get Nostr service early (needed for both paths)
+                val nostrService = NostrP2PService.getInstance(requireContext().applicationContext)
+                if (nostrService == null) {
+                    progressDialog.dismiss()
+                    Toast.makeText(requireContext(), "Nostr service not available", Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+                if (!nostrService.isRunning()) {
+                    nostrService.start()
+                    kotlinx.coroutines.delay(2000)
+                }
+
+                val recipientPubkey = nostrService.queryPubkeyByNametag(recipientNametag)
+                if (recipientPubkey == null) {
+                    progressDialog.dismiss()
+                    Toast.makeText(requireContext(), "Recipient not found", Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+
+                // Step 5a: Execute split if needed
+                if (splitPlan.requiresSplit) {
+                    progressDialog.setMessage("Executing token split...")
+
+                    val executor = TokenSplitExecutor(
+                        ServiceProvider.stateTransitionClient,
+                        ServiceProvider.getRootTrustBase()
+                    )
+
+                    splitResult = executor.executeSplitPlan(
+                        splitPlan,
+                        recipientProxyAddress,
+                        signingService,
+                        secret,
+                        onTokenBurned = { burnedToken ->
+                            // Mark token as burned immediately so it disappears from UI
+                            viewModel.markTokenAsBurned(burnedToken)
+                        }
+                    )
+
+                    // Update local wallet with new sender tokens
+                    splitResult.tokensKeptBySender.forEach { newToken ->
+                        viewModel.addNewTokenFromSplit(newToken)
+                    }
+                }
+
+                // Step 5b: Create transfer transactions for direct tokens (if any)
+                // These need to be transferred whether or not a split happened
+                if (splitPlan.tokensToTransferDirectly.isNotEmpty()) {
+                    progressDialog.setMessage("Creating transfer transactions...")
+
+                    for (tokenToTransfer in splitPlan.tokensToTransferDirectly) {
+                        val salt = ByteArray(32)
+                        java.security.SecureRandom().nextBytes(salt)
+
+                        Log.d("WalletFragment", "Creating transfer commitment:")
+                        Log.d("WalletFragment", "  Token: ${tokenToTransfer.id.bytes.joinToString("") { "%02x".format(it) }.take(16)}...")
+                        Log.d("WalletFragment", "  Recipient ProxyAddress: ${recipientProxyAddress.address}")
+                        Log.d("WalletFragment", "  RecipientPredicateHash: null (proxy transfer)")
+                        Log.d("WalletFragment", "  RecipientDataHash: null")
+
+                        val transferCommitment = withContext(Dispatchers.IO) {
+                            TransferCommitment.create(
+                                tokenToTransfer,
+                                recipientProxyAddress,
+                                salt,
+                                null,  // recipientPredicateHash - null for proxy transfers
+                                null,  // recipientDataHash
+                                signingService
+                            )
+                        }
+
+                        Log.d("WalletFragment", "Transfer commitment created successfully")
+
+                        val client = ServiceProvider.stateTransitionClient
+                        val response = withContext(Dispatchers.IO) {
+                            client.submitCommitment(transferCommitment).get()
+                        }
+
+                        if (response.status == SubmitCommitmentStatus.SUCCESS) {
+                            val inclusionProof = withContext(Dispatchers.IO) {
+                                val trustBase = ServiceProvider.getRootTrustBase()
+                                InclusionProofUtils.waitInclusionProof(
+                                    client,
+                                    trustBase,
+                                    transferCommitment
+                                ).get(30, java.util.concurrent.TimeUnit.SECONDS)
+                            }
+
+                            val transferTransaction = transferCommitment.toTransaction(inclusionProof)
+
+                            // Create transfer package (like old sendTokenViaNostr)
+                            val sourceTokenJson = UnicityObjectMapper.JSON.writeValueAsString(tokenToTransfer)
+                            val transferTxJson = UnicityObjectMapper.JSON.writeValueAsString(transferTransaction)
+
+                            val payload = mapOf(
+                                "sourceToken" to sourceTokenJson,
+                                "transferTx" to transferTxJson
+                            )
+                            val payloadJson = UnicityObjectMapper.JSON.writeValueAsString(payload)
+                            val transferPackage = "token_transfer:$payloadJson"
+
+                            Log.d("WalletFragment", "Transfer payload size: ${transferPackage.length / 1024}KB")
+
+                            // Send via sendDirectMessage (not sendTokenTransfer) for proper format
+                            val sent = try {
+                                nostrService.sendDirectMessage(recipientPubkey!!, transferPackage)
+                            } catch (e: Exception) {
+                                Log.e("WalletFragment", "Failed to send token: ${e.message}", e)
+                                false
+                            }
+
+                            if (sent) {
+                                successCount++
+                                // Only remove from wallet if send succeeded
+                                // Note: This doesn't guarantee relay accepted it (size limits, etc)
+                                // TODO: Wait for relay OK response before removing
+                                viewModel.removeTokenAfterTransfer(tokenToTransfer)
+                            } else {
+                                Log.w("WalletFragment", "Token NOT removed from wallet - send failed")
+                            }
+                        } else {
+                            Log.e("WalletFragment", "Failed to transfer token: ${response.status}")
+                        }
+                    }
+                }
+
+                // Step 6: Send SPLIT tokens via Nostr (if any)
+                // Regular tokens already sent in the else block above
+                if (splitPlan.requiresSplit && splitResult != null) {
+                    progressDialog.setMessage("Sending split tokens to recipient...")
+
+                    val nostrService = NostrP2PService.getInstance(requireContext().applicationContext)
+                    if (nostrService != null && nostrService.isRunning()) {
+                        // For split tokens, we need to send sourceToken + transferTx (same as regular transfers)
+                        // The splitResult has parallel lists: tokensForRecipient and recipientTransferTxs
+                        for ((index, sourceToken) in splitResult.tokensForRecipient.withIndex()) {
+                            try {
+                                val transferTx = splitResult.recipientTransferTxs[index]
+
+                                Log.d("WalletFragment", "Sending split token ${sourceToken.id.toHexString().take(8)}... via Nostr")
+
+                                val sourceTokenJson = UnicityObjectMapper.JSON.writeValueAsString(sourceToken)
+                                val transferTxJson = UnicityObjectMapper.JSON.writeValueAsString(transferTx)
+
+                                val payload = mapOf(
+                                    "sourceToken" to sourceTokenJson,
+                                    "transferTx" to transferTxJson
+                                )
+                                val payloadJson = UnicityObjectMapper.JSON.writeValueAsString(payload)
+                                val transferPackage = "token_transfer:$payloadJson"
+
+                                Log.d("WalletFragment", "Split token transfer payload size: ${transferPackage.length / 1024}KB")
+
+                                val sent = nostrService.sendDirectMessage(recipientPubkey!!, transferPackage)
+                                if (!sent) {
+                                    Log.e("WalletFragment", "Failed to send split token via Nostr")
+                                }
+                            } catch (e: Exception) {
+                                Log.e("WalletFragment", "Failed to send split token", e)
+                            }
+                        }
+                    }
+                }
+
+                progressDialog.dismiss()
+
+                // Calculate total sent: direct transfers + split tokens
+                val totalSent = successCount + (splitResult?.tokensForRecipient?.size ?: 0)
+
+                if (totalSent > 0) {
+                    vibrateSuccess()
+                    val formattedAmount = targetAmount.toDouble() / Math.pow(10.0, asset.decimals.toDouble())
+                    showSuccessDialog("Successfully sent $formattedAmount ${asset.symbol} to ${recipient.name}")
+                } else {
+                    Toast.makeText(requireContext(), "Transfer failed", Toast.LENGTH_LONG).show()
+                }
+
+            } catch (e: Exception) {
+                progressDialog.dismiss()
+                Log.e("WalletFragment", "Error in sendTokensWithSplitting", e)
+                Toast.makeText(requireContext(), "Transfer error: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun vibrateSuccess() {
+        try {
+            val vibrator = requireContext().getSystemService(VIBRATOR_SERVICE) as? Vibrator
+            vibrator?.let {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    // Double pulse for success
+                    val pattern = longArrayOf(0, 100, 100, 100)
+                    it.vibrate(VibrationEffect.createWaveform(pattern, -1))
+                } else {
+                    @Suppress("DEPRECATION")
+                    it.vibrate(longArrayOf(0, 100, 100, 100), -1)
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("MainActivity", "Failed to vibrate: ${e.message}")
+        }
     }
 
     private fun sendTokenViaNostr(token: Token, recipient: Contact) {

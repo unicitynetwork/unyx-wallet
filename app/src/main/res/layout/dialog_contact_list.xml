@@ -4,159 +4,142 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/background">
+    android:background="@drawable/welcome_bg"
+    android:paddingHorizontal="12dp">
 
     <!-- Header -->
-    <RelativeLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp">
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp"
+        android:layout_marginTop="48dp"
+        android:paddingBottom="12dp"
+        >
 
         <ImageButton
             android:id="@+id/btnBack"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_alignParentStart="true"
-            android:layout_centerVertical="true"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_arrow_back"
-            app:tint="@color/text_primary" />
+            android:contentDescription="Back"
+            app:tint="@android:color/white"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
+            android:layout_marginStart="8dp"
             android:text="Select Recipient"
-            android:textSize="20sp" />
+            android:textColor="@android:color/white"
+            android:fontFamily="@font/inter_bold"
+            android:textSize="28sp"/>
 
-    </RelativeLayout>
+    </LinearLayout>
 
     <!-- Search Bar -->
-    <com.google.android.material.card.MaterialCardView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginBottom="8dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="2dp">
+        android:layout_marginBottom="16dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_nametag_selector"
+        android:padding="12dp">
 
-        <LinearLayout
-            android:layout_width="match_parent"
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_search"
+            app:tint="#A0FFFFFF" />
+
+        <EditText
+            android:id="@+id/searchEditText"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="12dp"
-            android:gravity="center_vertical">
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:background="@null"
+            android:hint="Search Contacts"
+            android:textColor="@android:color/white"
+            android:textColorHint="#80FFFFFF"
+            android:textSize="16sp"
+            android:inputType="text"
+            android:imeOptions="actionSearch" />
+    </LinearLayout>
 
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_search"
-                app:tint="@color/text_secondary" />
-
-            <EditText
-                android:id="@+id/searchEditText"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="12dp"
-                android:background="@null"
-                android:hint="Search contacts"
-                android:textColorHint="@color/text_secondary"
-                android:textColor="@color/text_primary"
-                android:textSize="16sp"
-                android:inputType="text"
-                android:imeOptions="actionSearch" />
-
-        </LinearLayout>
-
-    </com.google.android.material.card.MaterialCardView>
-
-    <!-- Contact List Container -->
-    <FrameLayout
+    <!-- Contact List -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/contactsRecyclerView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
-        
-        <!-- Contact List -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/contactsRecyclerView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:paddingHorizontal="16dp"
-            android:paddingBottom="8dp"
-            android:clipToPadding="false" />
-        
-        <!-- Progress Bar -->
-        <ProgressBar
-            android:id="@+id/progressBar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:visibility="gone" />
+        android:layout_weight="1"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="8dp"
+        android:clipToPadding="false"
+        android:scrollbars="none" />
 
-        <!-- Empty State -->
-        <LinearLayout
-            android:id="@+id/emptyStateLayout"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:visibility="gone">
+    <!-- Progress Bar -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone" />
+
+    <!-- Empty State -->
+    <LinearLayout
+        android:id="@+id/emptyStateLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone">
 
         <ImageView
             android:layout_width="80dp"
             android:layout_height="80dp"
             android:src="@drawable/ic_person"
-            app:tint="@color/text_secondary"
-            android:alpha="0.5" />
+            app:tint="#80FFFFFF" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="No contacts found"
-            android:textColor="@color/text_secondary"
+            android:textColor="#80FFFFFF"
             android:textSize="16sp" />
+    </LinearLayout>
 
-        </LinearLayout>
-        
-    </FrameLayout>
-
-    <!-- Filter Toggle at Bottom -->
-    <com.google.android.material.card.MaterialCardView
+    <!-- Bottom Toggle -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="12dp"
-        app:cardCornerRadius="8dp"
-        app:cardElevation="0dp"
-        app:cardBackgroundColor="@color/card_background">
+        android:layout_marginBottom="24dp"
+        android:background="@drawable/bg_nametag_selector"
+        android:backgroundTint="#33FFFFFF"
+        android:orientation="horizontal"
+        android:paddingVertical="12dp"
+        android:paddingHorizontal="24dp"
+        android:gravity="center_vertical">
 
-        <LinearLayout
-            android:layout_width="match_parent"
+        <TextView
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="12dp"
-            android:gravity="center_vertical">
+            android:layout_weight="1"
+            android:text="Show only @unicity contacts"
+            android:textColor="#40FFFFFF"
+            android:textSize="14sp" />
 
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Show only @unicity contacts"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp" />
-
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/unicityFilterSwitch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:trackTint="@color/switch_track_selector"
-                app:thumbTint="@color/switch_thumb_selector" />
-
-        </LinearLayout>
-
-    </com.google.android.material.card.MaterialCardView>
-
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/unicityFilterSwitch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:thumbTint="@color/white"
+            app:trackTint="@color/green"
+            />
+    </LinearLayout>
 </LinearLayout>

@@ -1,20 +1,17 @@
 package com.example.unicitywallet.ui.wallet
 
-import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
 import com.example.unicitywallet.R
 import com.example.unicitywallet.data.model.AggregatedAsset
 import androidx.core.graphics.toColorInt
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import com.example.unicitywallet.utils.IconCacheManager
-import kotlin.compareTo
 
 class AssetsAdapter(
     private val currency: String = "USD" // Can be switched if needed
@@ -55,7 +52,7 @@ class AssetsAdapter(
             name.text = (asset.name ?: asset.symbol).replaceFirstChar { it.uppercase() }
 
             // Format as "SYMBOL · amount"
-            symbol.text = "${asset.symbol} · ${asset.getFormattedAmount()}"
+            symbol.text = "${asset.getFormattedAmount()} ${asset.symbol}"
 
             // Show fiat value
             value.text = asset.getFormattedFiatValue(currency)
@@ -72,7 +69,7 @@ class AssetsAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AssetViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_token, parent, false)
+            .inflate(R.layout.item_asset, parent, false)
         return AssetViewHolder(view)
     }
 

@@ -9,6 +9,7 @@ enum class TokenStatus {
     SUBMITTED,    // Submitted to network, waiting for confirmation
     TRANSFERRED,  // Token sent to another wallet (archived)
     CONFIRMED,    // Confirmed on network
+    BURNED,       // Token burned (split/swap) - cannot be used
     FAILED        // Network submission failed
 }
 data class Token(
@@ -23,7 +24,7 @@ data class Token(
     val transactionId: String? = null,
     val isOfflineTransfer: Boolean = false,
     val pendingOfflineData: String? = null,
-    val amount: Long? = null,           // Amount of fungible tokens (e.g., 1000 SOL)
+    val amount: String? = null,           // Amount of fungible tokens (e.g., 1000 SOL)
     val coinId: String? = null,         // Hex string coin ID from registry
     val symbol: String? = null,         // e.g., "SOL"
     val iconUrl: String? = null
@@ -33,6 +34,14 @@ data class Token(
             sizeBytes < 1024 -> "${sizeBytes}B"
             sizeBytes < 1024 * 1024 -> "${sizeBytes / 1024}KB"
             else -> "${sizeBytes / (1024 * 1024)}MB"
+        }
+    }
+
+    fun getAmountAsBigInteger(): java.math.BigInteger? {
+        return try {
+            amount?.let { java.math.BigInteger(it) }
+        } catch (e: Exception) {
+            null
         }
     }
 }

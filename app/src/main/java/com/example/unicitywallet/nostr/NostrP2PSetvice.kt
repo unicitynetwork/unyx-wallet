@@ -25,12 +25,18 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import org.spongycastle.util.encoders.Hex
 import org.unicitylabs.sdk.serializer.UnicityObjectMapper
 import com.example.unicitywallet.utils.JsonMapper
+import org.unicitylabs.nostr.nametag.NametagBinding
+import org.unicitylabs.nostr.protocol.EventKinds
+import org.unicitylabs.sdk.address.ProxyAddress
+import org.unicitylabs.sdk.predicate.embedded.UnmaskedPredicate
+import org.unicitylabs.sdk.signing.SigningService
+import org.unicitylabs.sdk.token.TokenState
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import kotlin.collections.get
 
 data class Event(
     val id: String,
@@ -96,7 +102,7 @@ class NostrP2PService(
     }
 
     // Core components
-    private val keyManager = NostrKeyManager(context)
+    private val keyManager = NostrKeyManagerAdapter(context)
     // Using shared JsonMapper
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -442,7 +448,7 @@ class NostrP2PService(
         val result = ByteArray(32)
         hash.doFinal(result, 0)
 
-        return Hex.toHexString(result)
+        return String(org.apache.commons.codec.binary.Hex.encodeHex(result))
     }
 
     /**
@@ -450,9 +456,9 @@ class NostrP2PService(
      * Nostr uses Schnorr signatures (BIP-340) for events
      */
     private fun signEvent(eventId: String): String {
-        val messageBytes = Hex.decode(eventId)
+        val messageBytes = org.apache.commons.codec.binary.Hex.decodeHex(eventId.toCharArray())
         val signature = keyManager.sign(messageBytes)
-        return Hex.toHexString(signature)
+        return String(org.apache.commons.codec.binary.Hex.encodeHex(signature))
     }
 
     /**
@@ -613,7 +619,7 @@ class NostrP2PService(
         return try {
             val tagBytes = tag.toByteArray()
             val hash = MessageDigest.getInstance("SHA-256").digest(tagBytes)
-            val pubkey = Hex.toHexString(hash)
+            val pubkey = String(org.apache.commons.codec.binary.Hex.encodeHex(hash))
             Log.d(TAG, "=== RESOLVE DEBUG: Generated fallback pubkey for $tag: ${pubkey.take(20)}... ===")
             pubkey
         } catch (e: Exception) {
@@ -623,8 +629,8 @@ class NostrP2PService(
     }
 
     private fun createEncryptedMessage(recipientPubkey: String, content: String): Event {
-        // Implement NIP-04 encryption
-        val recipientPubkeyBytes = Hex.decode(recipientPubkey)
+        // Implement NIP-04 encryption with auto-compression (SDK)
+        val recipientPubkeyBytes = org.apache.commons.codec.binary.Hex.decodeHex(recipientPubkey.toCharArray())
         val encryptedContent = keyManager.encryptMessage(content, recipientPubkeyBytes)
 
         return createEvent(
@@ -635,9 +641,9 @@ class NostrP2PService(
     }
 
     private fun handleEncryptedMessage(event: Event) {
-        // Decrypt NIP-04 message
+        // Decrypt NIP-04 message with auto-decompression (SDK)
         try {
-            val senderPubkeyBytes = Hex.decode(event.pubkey)
+            val senderPubkeyBytes = org.apache.commons.codec.binary.Hex.decodeHex(event.pubkey.toCharArray())
             val decryptedContent = keyManager.decryptMessage(event.content, senderPubkeyBytes)
 
             Log.d(TAG, "Received encrypted message from ${event.pubkey}: $decryptedContent")
@@ -689,15 +695,19 @@ class NostrP2PService(
                 Log.d(TAG, "Processing token transfer from ${event.pubkey}")
 
                 // Decrypt the message content
-                // Try hex decoding first (faucet uses simple hex), then NIP-04
+                // SDK handles both NIP-04 (new) and hex (legacy) automatically
                 val decryptedContent = try {
-                    // First try simple hex decoding (faucet format)
+                    // Try NIP-04 decryption first (SDK handles auto-decompression)
                     try {
-                        String(Hex.decode(event.content), Charsets.UTF_8)
-                    } catch (hexError: Exception) {
-                        // Fall back to NIP-04 encryption
-                        val senderPubkeyBytes = Hex.decode(event.pubkey)
+                        val senderPubkeyBytes = org.apache.commons.codec.binary.Hex.decodeHex(event.pubkey.toCharArray())
                         keyManager.decryptMessage(event.content, senderPubkeyBytes)
+                    } catch (nip04Error: Exception) {
+                        // Fall back to simple hex decoding (legacy format)
+                        try {
+                            String(org.apache.commons.codec.binary.Hex.decodeHex(event.content.toCharArray()), Charsets.UTF_8)
+                        } catch (hexError: Exception) {
+                            throw Exception("Failed both NIP-04 and hex decryption", nip04Error)
+                        }
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to decrypt token transfer", e)
@@ -737,7 +747,7 @@ class NostrP2PService(
         }
     }
 
-    private fun showTokenReceivedNotification(amount: Long?, symbol: String) {
+    private fun showTokenReceivedNotification(amount: String?, symbol: String) {
         // TODO: Implement notification
         Log.i(TAG, "📬 New token received: $amount $symbol")
     }
@@ -889,7 +899,7 @@ class NostrP2PService(
             var myNametagToken: org.unicitylabs.sdk.token.Token<*>? = null
 
             for ((nametagString, nametagToken) in allNametags) {
-                val proxyAddress = org.unicitylabs.sdk.address.ProxyAddress.create(nametagToken.id)
+                val proxyAddress = ProxyAddress.create(nametagToken.id)
                 if (proxyAddress.address == recipientAddress.address) {
                     matchedNametag = nametagString
                     myNametagToken = nametagToken
@@ -906,7 +916,7 @@ class NostrP2PService(
 
             Log.d(TAG, "✅ Transfer is for my nametag: $matchedNametag")
 
-            // Get identity to create signing service
+            // Get identity and create signing service
             val identityManager = IdentityManager(context)
             val identity = identityManager.getCurrentIdentity()
             if (identity == null) {
@@ -914,46 +924,109 @@ class NostrP2PService(
                 return null
             }
 
-            // Create signing service for UnmaskedPredicate
             val secret = hexToBytes(identity.privateKey)
-            val signingService = org.unicitylabs.sdk.signing.SigningService.createFromSecret(secret)
+            val signingService = SigningService.createFromSecret(secret)
 
-            // CRITICAL: Create recipient predicate using the salt FROM the transfer transaction
+            // Create recipient predicate
             val transferSalt = transferTx.data.salt
-            val recipientPredicate = org.unicitylabs.sdk.predicate.embedded.UnmaskedPredicate.create(
-                sourceToken.id,     // Use TOKEN's ID (not random!)
-                sourceToken.type,   // Use TOKEN's type
+
+            Log.d(TAG, "Creating recipient predicate:")
+            Log.d(TAG, "  Identity pubkey: ${identity.publicKey}")
+            Log.d(TAG, "  Source TokenId: ${bytesToHex(sourceToken.id.bytes).take(16)}...")
+            Log.d(TAG, "  TokenType: ${sourceToken.type}")
+            Log.d(TAG, "  Transfer Salt: ${bytesToHex(transferSalt).take(16)}...")
+
+            val recipientPredicate = UnmaskedPredicate.create(
+                sourceToken.id,
+                sourceToken.type,
                 signingService,
                 org.unicitylabs.sdk.hash.HashAlgorithm.SHA256,
-                transferSalt  // Use TRANSACTION's salt (critical!)
+                transferSalt
             )
 
-            val recipientState = org.unicitylabs.sdk.token.TokenState(recipientPredicate, null)
+            Log.d(TAG, "✅ Predicate created - PublicKey: ${bytesToHex(recipientPredicate.publicKey).take(32)}...")
+
+            val recipientState = TokenState(recipientPredicate, null)
 
             Log.d(TAG, "Finalizing transfer with nametag token...")
+            Log.d(TAG, "  Transfer Recipient: ${transferTx.data.recipient.address}")
+            Log.d(TAG, "  My Nametag ProxyAddress: ${org.unicitylabs.sdk.address.ProxyAddress.create(myNametagToken.id).address}")
 
             // Get StateTransitionClient and trustBase
             val client = ServiceProvider.stateTransitionClient
             val trustBase = ServiceProvider.getRootTrustBase()
 
             // Finalize the transaction with nametag for proxy resolution
-            val finalizedToken = withContext(Dispatchers.IO) {
-                client.finalizeTransaction(
-                    trustBase,
-                    sourceToken,
-                    recipientState,
-                    transferTx,
-                    listOf(myNametagToken)  // Include nametag for proxy resolution
-                )
+            val finalizedToken = try {
+                withContext(Dispatchers.IO) {
+                    client.finalizeTransaction(
+                        trustBase,
+                        sourceToken,
+                        recipientState,
+                        transferTx,
+                        listOf(myNametagToken)  // Include nametag for proxy resolution
+                    )
+                }
+            } catch (ve: org.unicitylabs.sdk.verification.VerificationException) {
+                // CRITICAL: Log verification details to debug the issue
+                Log.e(TAG, "❌❌❌ VERIFICATION FAILED ❌❌❌")
+                Log.e(TAG, "Verification Result: ${ve.verificationResult}")
+                Log.e(TAG, "Full exception:", ve)
+
+                // CRITICAL: Save failed transfer for recovery
+                saveFailedTransfer(sourceToken, transferTx, matchedNametag, ve.verificationResult.toString())
+
+                throw ve // Re-throw after logging
             }
 
             Log.i(TAG, "✅ Token finalized successfully!")
             return finalizedToken
 
+        } catch (ve: org.unicitylabs.sdk.verification.VerificationException) {
+            Log.e(TAG, "❌ CRITICAL: Token verification failed during finalization")
+            Log.e(TAG, "VerificationResult: ${ve.verificationResult}")
+            Log.e(TAG, "This transfer has been saved for manual recovery")
+            ve.printStackTrace()
+            return null
         } catch (e: Exception) {
-            Log.e(TAG, "Error finalizing transfer", e)
+            Log.e(TAG, "❌ Error finalizing transfer", e)
             e.printStackTrace()
             return null
+        }
+    }
+
+    /**
+     * CRITICAL: Save failed transfer for manual recovery
+     * Never lose tokens due to verification errors
+     */
+    private suspend fun saveFailedTransfer(
+        sourceToken: org.unicitylabs.sdk.token.Token<*>,
+        transferTx: org.unicitylabs.sdk.transaction.Transaction<org.unicitylabs.sdk.transaction.TransferTransactionData>,
+        nametag: String,
+        verificationError: String
+    ) {
+        try {
+            val failedTransferDir = java.io.File(context.filesDir, "failed_transfers")
+            failedTransferDir.mkdirs()
+
+            val timestamp = System.currentTimeMillis()
+            val failedTransferFile = java.io.File(failedTransferDir, "failed_$timestamp.json")
+
+            val failedTransferData = mapOf(
+                "timestamp" to timestamp,
+                "nametag" to nametag,
+                "verificationError" to verificationError,
+                "sourceToken" to UnicityObjectMapper.JSON.writeValueAsString(sourceToken),
+                "transferTx" to UnicityObjectMapper.JSON.writeValueAsString(transferTx)
+            )
+
+            failedTransferFile.writeText(JsonMapper.toJson(failedTransferData))
+
+            Log.e(TAG, "❌❌❌ FAILED TRANSFER SAVED: ${failedTransferFile.absolutePath}")
+            Log.e(TAG, "Token is NOT lost - can be manually recovered from this file")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "CRITICAL: Failed to save failed transfer - TOKEN MAY BE LOST!", e)
         }
     }
 
@@ -967,7 +1040,7 @@ class NostrP2PService(
 
             // Extract metadata from token for wallet display
             val registry = UnicityTokenRegistry.getInstance(context)
-            var amount: Long? = null
+            var amount: String? = null // BigInteger as String (arbitrary precision)
             var coinIdHex: String? = null
             var symbol: String? = null
             var iconUrl: String? = null
@@ -993,10 +1066,16 @@ class NostrP2PService(
                         val firstCoin = coinsArray[0] as? List<*>
                         if (firstCoin != null && firstCoin.size >= 2) {
                             coinIdHex = firstCoin[0] as? String
+                            // Store amount as String to support BigInteger (arbitrary precision)
                             amount = when (val amountValue = firstCoin[1]) {
-                                is String -> amountValue.toLongOrNull()
-                                is Number -> amountValue.toLong()
-                                else -> null
+                                is java.math.BigInteger -> amountValue.toString()
+                                is java.math.BigDecimal -> amountValue.toBigInteger().toString()
+                                is String -> amountValue
+                                is Number -> amountValue.toString()
+                                else -> {
+                                    Log.e(TAG, "Unknown amount type: ${amountValue?.javaClass}")
+                                    null
+                                }
                             }
 
                             Log.d(TAG, "Extracted: coinId=$coinIdHex, amount=$amount")
@@ -1029,7 +1108,7 @@ class NostrP2PService(
                 jsonData = tokenJson,
                 sizeBytes = tokenJson.length,
                 status = TokenStatus.CONFIRMED,
-                amount = amount,
+                amount = amount, // Store as string to support BigInteger
                 coinId = coinIdHex,
                 symbol = symbol,
                 iconUrl = iconUrl
@@ -1095,8 +1174,8 @@ class NostrP2PService(
             // Format: "token_transfer:<token_json>"
             val content = "token_transfer:$tokenJson"
 
-            // Encrypt the content for the recipient
-            val recipientPubkeyBytes = Hex.decode(recipientPubkey)
+            // Encrypt the content for the recipient (SDK handles auto-compression)
+            val recipientPubkeyBytes = org.apache.commons.codec.binary.Hex.decodeHex(recipientPubkey.toCharArray())
             val encryptedContent = keyManager.encryptMessage(content, recipientPubkeyBytes)
 
             // Create token transfer event
@@ -1188,16 +1267,24 @@ class NostrP2PService(
      */
     suspend fun publishNametagBinding(nametagId: String, unicityAddress: String): Boolean {
         return try {
-            val bindingManager = NostrNametagBinding()
-            val publicKey = keyManager.getPublicKey()
-
             Log.d(TAG, "Publishing nametag binding for: $nametagId")
 
-            val bindingEvent = bindingManager.createBindingEvent(
-                publicKeyHex = publicKey,
-                nametagId = nametagId,
-                unicityAddress = unicityAddress,
-                keyManager = keyManager
+            // Create binding event using SDK
+            val sdkEvent = NametagBinding.createBindingEvent(
+                keyManager.getSdkKeyManager(),
+                nametagId,
+                unicityAddress
+            )
+
+            // Convert SDK event to wallet Event format
+            val bindingEvent = Event(
+                id = sdkEvent.id,
+                pubkey = sdkEvent.pubkey,
+                created_at = sdkEvent.createdAt,
+                kind = sdkEvent.kind,
+                tags = sdkEvent.tags,
+                content = sdkEvent.content,
+                sig = sdkEvent.sig
             )
 
             // Publish the event to all connected relays
@@ -1222,8 +1309,15 @@ class NostrP2PService(
      */
     suspend fun queryPubkeyByNametag(nametagId: String): String? {
         return try {
-            val bindingManager = NostrNametagBinding()
-            val filter = bindingManager.createNametagToPubkeyFilter(nametagId)
+            // Create filter using SDK
+            val sdkFilter = NametagBinding.createNametagToPubkeyFilter(nametagId)
+
+            // Convert SDK filter to map for WebSocket
+            val filter = mapOf(
+                "kinds" to sdkFilter.kinds,
+                "#t" to sdkFilter.tTags,
+                "limit" to sdkFilter.limit
+            )
 
             Log.d(TAG, "Querying pubkey for nametag: $nametagId")
             Log.d(TAG, "Filter: $filter")
@@ -1235,7 +1329,7 @@ class NostrP2PService(
 
             // Add temporary listener for this query
             val listener: (Event) -> Unit = { event ->
-                if (event.kind == NostrNametagBinding.KIND_NAMETAG_BINDING) {
+                if (event.kind == EventKinds.APP_DATA) {
                     // Relay filter already ensures this is for our nametag
                     receivedEvent.complete(event)
                 }

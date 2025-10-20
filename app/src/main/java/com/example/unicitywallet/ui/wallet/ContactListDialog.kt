@@ -6,6 +6,8 @@ import android.app.Dialog
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.WindowManager
@@ -41,7 +43,7 @@ class ContactListDialog(
         // Set up full screen dialog
         window?.apply {
             setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT)
-            setBackgroundDrawableResource(android.R.color.background_light)
+//            setBackgroundDrawableResource(android.R.color.background_light)
         }
 
         setupViews()
@@ -56,8 +58,13 @@ class ContactListDialog(
 
         // Set up RecyclerView
         contactAdapter = ContactAdapter { contact ->
-            onContactSelected(contact)
-            dismiss()
+            val selectedContact = contact
+
+            onContactSelected(selectedContact)
+
+            Handler(Looper.getMainLooper()).postDelayed({
+                dismiss()
+            }, 50)
         }
 
         binding.contactsRecyclerView.apply {

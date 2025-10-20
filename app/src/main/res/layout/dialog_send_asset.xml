@@ -1,217 +1,137 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:clipToPadding="false"
     android:clipChildren="false"
-    android:paddingBottom="8dp">
+    android:paddingBottom="8dp"
+    android:background="@android:color/background_dark">
 
-<LinearLayout
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:background="?android:attr/colorBackground"
-    android:paddingBottom="8dp">
-
-    <!-- Header with title and close button -->
-    <RelativeLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="24dp">
+        android:orientation="vertical"
+        android:paddingBottom="8dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Send Asset"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:textColor="?android:attr/textColorPrimary"
-            android:layout_centerVertical="true" />
-
-        <ImageButton
-            android:id="@+id/btnClose"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_alignParentEnd="true"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_close"
-            android:contentDescription="Close"
-            app:tint="?android:attr/textColorSecondary" />
-
-    </RelativeLayout>
-    
-    <!-- Recipient Info Card -->
-    <com.google.android.material.card.MaterialCardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="24dp"
-        android:layout_marginBottom="16dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="2dp"
-        app:cardBackgroundColor="@color/card_background">
-        
-        <LinearLayout
+        <!-- Header with title and close button -->
+        <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="16dp"
-            android:gravity="center_vertical">
-            
+            android:padding="24dp">
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="To:"
-                android:textColor="@color/text_secondary"
-                android:textSize="14sp"
-                android:layout_marginEnd="12dp" />
-            
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-                
-                <TextView
-                    android:id="@+id/recipientName"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="John Doe"
-                    android:textColor="@color/text_primary"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-                
-                <TextView
-                    android:id="@+id/recipientAddress"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="john@unicity"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="14sp"
-                    android:layout_marginTop="2dp" />
-                
-            </LinearLayout>
-            
-            <ImageView
-                android:id="@+id/recipientUnicityBadge"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_marginStart="8dp"
-                android:src="@drawable/unicity_logo"
-                android:visibility="gone" />
-            
-        </LinearLayout>
-        
-    </com.google.android.material.card.MaterialCardView>
+                android:text="Send Asset"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/white"
+                android:layout_centerVertical="true" />
 
-    <!-- Select Asset -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Select Asset:"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:textColor="?android:attr/textColorPrimary"
-        android:layout_marginHorizontal="24dp"
-        android:layout_marginBottom="8dp" />
+            <ImageButton
+                android:id="@+id/btnClose"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_alignParentEnd="true"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_close"
+                android:contentDescription="Close" />
+        </RelativeLayout>
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="24dp"
-        android:layout_marginBottom="8dp"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-        android:hint="Choose asset">
+        <!-- Select Asset -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Select Asset:"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            android:layout_marginHorizontal="24dp"
+            android:layout_marginBottom="8dp" />
 
         <AutoCompleteTextView
             android:id="@+id/assetSelector"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
+            android:layout_marginHorizontal="24dp"
+            android:layout_marginBottom="8dp"
+            android:hint="Choose asset"
             android:inputType="none"
-            android:editable="false" />
+            android:focusable="false"
+            android:clickable="true"
+            android:paddingHorizontal="12dp"
+            android:textColor="@android:color/white"
+            android:textColorHint="#80FFFFFF" />
 
-    </com.google.android.material.textfield.TextInputLayout>
+        <!-- Available Balance -->
+        <TextView
+            android:id="@+id/availableBalanceText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Available balance will be shown when asset is selected"
+            android:textSize="14sp"
+            android:textColor="#B3FFFFFF"
+            android:layout_marginHorizontal="24dp"
+            android:layout_marginBottom="16dp" />
 
-    <!-- Available Balance -->
-    <TextView
-        android:id="@+id/availableBalanceText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Available balance will be shown when asset is selected"
-        android:textSize="14sp"
-        android:textColor="?android:attr/textColorSecondary"
-        android:layout_marginHorizontal="24dp"
-        android:layout_marginBottom="16dp" />
+        <!-- Amount Input -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Amount:"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            android:layout_marginHorizontal="24dp"
+            android:layout_marginBottom="8dp" />
 
-    <!-- Amount Input -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Amount:"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:textColor="?android:attr/textColorPrimary"
-        android:layout_marginHorizontal="24dp"
-        android:layout_marginBottom="8dp" />
-
-    <com.google.android.material.textfield.TextInputLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="24dp"
-        android:layout_marginBottom="8dp"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-        android:hint="Enter amount">
-
-        <com.google.android.material.textfield.TextInputEditText
+        <EditText
             android:id="@+id/amountInput"
             android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginHorizontal="24dp"
+            android:layout_marginBottom="8dp"
+            android:hint="Enter amount"
+            android:inputType="numberDecimal"
+            android:paddingHorizontal="12dp"
+            android:textColor="@android:color/white"
+            android:textColorHint="#80FFFFFF" />
+
+        <!-- Note/Message (Optional) -->
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:inputType="numberDecimal" />
+            android:text="Note (optional):"
+            android:textSize="16sp"
+            android:textColor="@android:color/white"
+            android:layout_marginHorizontal="24dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp" />
 
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <!-- Note/Message (Optional) -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Note (optional):"
-        android:textSize="16sp"
-        android:textColor="?android:attr/textColorPrimary"
-        android:layout_marginHorizontal="24dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="8dp" />
-
-    <com.google.android.material.textfield.TextInputLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="24dp"
-        android:layout_marginBottom="24dp"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-        android:hint="Add a note">
-
-        <com.google.android.material.textfield.TextInputEditText
+        <EditText
             android:id="@+id/noteInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginHorizontal="24dp"
+            android:layout_marginBottom="24dp"
+            android:hint="Add a note"
             android:inputType="textMultiLine"
             android:minLines="2"
-            android:maxLines="4" />
+            android:maxLines="4"
+            android:padding="12dp"
+            android:textColor="@android:color/white"
+            android:textColorHint="#80FFFFFF" />
 
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <!-- Send Button -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnSend"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="24dp"
-        android:layout_marginBottom="16dp"
-        android:text="Send"
-        android:textAllCaps="false"
-        android:textSize="16sp"
-        style="@style/Button.Unicity"
-        app:icon="@drawable/ic_send"
-        app:iconGravity="textEnd" />
-
-</LinearLayout>
+        <!-- Send Button -->
+        <Button
+            android:id="@+id/btnSend"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginHorizontal="24dp"
+            android:layout_marginBottom="16dp"
+            android:text="Send"
+            android:textAllCaps="false"
+            android:textSize="16sp"
+            android:textColor="@android:color/white" />
+    </LinearLayout>
 </ScrollView>

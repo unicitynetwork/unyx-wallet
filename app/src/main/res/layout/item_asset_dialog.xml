@@ -33,7 +33,7 @@
             android:text="Bitcoin"
             android:textSize="16sp"
             android:textStyle="bold"
-            android:textColor="?android:attr/textColorPrimary" />
+            android:textColor="#FAF6F6" />
 
         <!-- Asset Symbol -->
         <TextView
@@ -42,7 +42,7 @@
             android:layout_height="wrap_content"
             android:text="BTC"
             android:textSize="14sp"
-            android:textColor="?android:attr/textColorSecondary"
+            android:textColor="#35FFFFFF"
             android:layout_marginTop="2dp" />
 
     </LinearLayout>
@@ -52,6 +52,6 @@
         android:layout_width="24dp"
         android:layout_height="24dp"
         android:src="@drawable/ic_chevron_right"
-        app:tint="?android:attr/textColorSecondary" />
+        app:tint="#FFFFFF" />
 
 </LinearLayout>

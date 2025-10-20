@@ -7,303 +7,321 @@
     android:background="@drawable/welcome_bg"
     tools:context=".ui.wallet.WalletActivity">
 
-
-    <LinearLayout
-        android:id="@+id/layoutWallet"
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:layout_height="match_parent">
 
-    <LinearLayout
-        android:id="@+id/headerContainer"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-        <!-- 🔹 Верхняя панель -->
-        <RelativeLayout
+        <LinearLayout
+            android:id="@+id/layoutWallet"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingHorizontal="20dp"
-            android:paddingTop="15dp">
+            android:layout_height="match_parent" android:orientation="vertical">
 
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:id="@+id/headerContainer"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/tvWalletName"
-                    android:text="Main Wallet"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
-                    android:textColor="@android:color/white"
+                <RelativeLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_width="wrap_content" />
+                    android:paddingHorizontal="20dp"
+                    android:layout_marginTop="15dp">
 
-                <TextView
-                    android:id="@+id/tvWalletTag"
-                    android:text="@unicityName"
-                    android:textSize="13sp"
-                    android:textColor="#B3FFFFFF"
-                    android:layout_height="wrap_content"
-                    android:layout_width="wrap_content" />
-            </LinearLayout>
+                    <ImageView
+                        android:id="@+id/btnQRScanner"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/qr_code"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true" />
 
-            <ImageView
-                android:id="@+id/btnSettings"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/settings_ic"
-                android:layout_alignParentEnd="true" />
-        </RelativeLayout>
+                    <LinearLayout
+                        android:id="@+id/walletContainer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="32dp"
+                        android:layout_centerHorizontal="true"
+                        android:layout_centerVertical="true"
+                        android:background="@drawable/bg_nametag_selector"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingLeft="20dp"
+                        android:paddingRight="15dp"
+                        >
 
-        <!-- 🔹 Баланс -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:layout_marginTop="30dp">
+                        <TextView
+                            android:id="@+id/tvWalletAddress"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="nametag"
+                            android:textColor="@android:color/white"
+                            android:textSize="14sp"
+                            android:gravity="center_vertical" />
 
-            <TextView
-                android:id="@+id/tvBalance"
-                android:text="$50,450.8"
-                android:textColor="@android:color/white"
-                android:textSize="35sp"
-                android:fontFamily="@font/inter_bold"
-                android:layout_height="wrap_content"
-                android:layout_width="wrap_content" />
+                        <ImageView
+                            android:id="@+id/ivDropdown"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:layout_marginStart="3dp"
+                            android:layout_marginTop="2dp"
+                            android:src="@drawable/ic_chevron_down"
+                            android:layout_gravity="center_vertical" />
+                    </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:layout_marginTop="4dp">
-
-                <TextView
-                    android:id="@+id/tvChangeValue"
-                    android:text="+$151.6"
-                    android:textColor="#7DFF83"
-                    android:textSize="15sp"
-                    android:fontFamily="@font/inter_bold"
-                    android:layout_marginEnd="6dp"
-                    android:layout_height="wrap_content"
-                    android:layout_width="wrap_content" />
-
-                <TextView
-                    android:id="@+id/tvChangePercent"
-                    android:text="+3.32%"
-                    android:paddingHorizontal="8dp"
-                    android:paddingVertical="2dp"
-                    android:background="@drawable/bg_profit"
-                    android:textColor="#77F57B"
-                    android:fontFamily="@font/inter_medium"
-                    android:textSize="12sp"
-                    android:layout_height="wrap_content"
-                    android:layout_width="wrap_content" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- 🔹 Кнопки действий -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_gravity="center"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:layout_marginTop="24dp"
-            android:weightSum="3">
-
-            <LinearLayout
-                android:id="@+id/btnReceive"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:layout_marginHorizontal="14dp">
-
-                <ImageView
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
-                    android:src="@drawable/receive_ic"
-                    android:background="@drawable/btn_circle"
-                    android:padding="14dp" />
-
-                <TextView
-                    android:text="Receive"
-                    android:textColor="#75FFFFFF"
-                    android:textSize="12sp"
-                    android:fontFamily="@font/inter_semibold"
-                    android:layout_marginTop="1dp"
-                    android:layout_height="wrap_content"
-                    android:layout_width="wrap_content" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/btnSend"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:layout_marginHorizontal="14dp">
-
-                <ImageView
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
-                    android:src="@drawable/send_ic"
-                    android:background="@drawable/btn_circle"
-                    android:padding="14dp" />
-
-                <TextView
-                    android:text="Send"
-                    android:textColor="#75FFFFFF"
-                    android:textSize="12sp"
-                    android:fontFamily="@font/inter_semibold"
-                    android:layout_marginTop="1dp"
-                    android:layout_height="wrap_content"
-                    android:layout_width="wrap_content" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/btnBuy"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:layout_marginHorizontal="14dp">
-
-                <ImageView
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
-                    android:src="@drawable/buy_ic"
-                    android:background="@drawable/btn_circle"
-                    android:padding="14dp" />
-
-                <TextView
-                    android:text="Buy"
-                    android:textColor="#75FFFFFF"
-                    android:textSize="12sp"
-                    android:fontFamily="@font/inter_semibold"
-                    android:layout_marginTop="1dp"
-                    android:layout_height="wrap_content"
-                    android:layout_width="wrap_content" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- 🔹 Список ассетов -->
-        <TextView
-            android:id="@+id/tvMyAssets"
-            android:text="My Assets"
-            android:textColor="@android:color/white"
-            android:textSize="14sp"
-            android:fontFamily="@font/inter_semibold"
-            android:layout_marginStart="20dp"
-            android:layout_marginTop="50dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-
-        <FrameLayout
-            android:id="@+id/tabSection"
-            android:layout_width="match_parent"
-            android:layout_height="37dp"
-            android:layout_marginTop="10dp"
-            android:layout_marginHorizontal="20dp"
-            android:background="@drawable/tab_section_bordered">
-
-            <!-- Зелёный фон -->
-            <View
-                android:id="@+id/activeTabBg"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_gravity="start"
-                android:background="@drawable/btn_green_rounded" />
-
-            <!-- Кнопки -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="horizontal">
+                    <ImageView
+                        android:id="@+id/btnSettings"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/settings_ic"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true" />
+                </RelativeLayout>
 
                 <LinearLayout
-                    android:id="@+id/btnTokens"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="match_parent"
-                    android:gravity="center">
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:layout_marginTop="30dp">
 
                     <TextView
-                        android:text="Tokens"
-                        android:textSize="14sp"
-                        android:textColor="#262626"
-                        android:fontFamily="@font/inter_semibold"
+                        android:id="@+id/tvBalance"
+                        android:text="$50,450.8"
+                        android:textColor="@android:color/white"
+                        android:textSize="35sp"
+                        android:fontFamily="@font/inter_bold"
                         android:layout_height="wrap_content"
                         android:layout_width="wrap_content" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:layout_marginTop="4dp">
+
+                        <TextView
+                            android:id="@+id/tvChangeValue"
+                            android:text="+$151.6"
+                            android:textColor="#7DFF83"
+                            android:textSize="15sp"
+                            android:fontFamily="@font/inter_bold"
+                            android:layout_marginEnd="6dp"
+                            android:layout_height="wrap_content"
+                            android:layout_width="wrap_content" />
+
+                        <TextView
+                            android:id="@+id/tvChangePercent"
+                            android:text="+3.32%"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="2dp"
+                            android:background="@drawable/bg_profit"
+                            android:textColor="#77F57B"
+                            android:fontFamily="@font/inter_medium"
+                            android:textSize="12sp"
+                            android:layout_height="wrap_content"
+                            android:layout_width="wrap_content" />
+                    </LinearLayout>
                 </LinearLayout>
 
                 <LinearLayout
-                    android:id="@+id/btnCollectibles"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="match_parent"
-                    android:gravity="center">
-
-                    <TextView
-                        android:text="Collectibles"
-                        android:textSize="14sp"
-                        android:textColor="#50FFFFFF"
-                        android:fontFamily="@font/inter_semibold"
-                        android:layout_height="wrap_content"
-                        android:layout_width="wrap_content" />
-                </LinearLayout>
-            </LinearLayout>
-        </FrameLayout>
-    </LinearLayout>
-        <!-- 🔹 Список токенов + empty state -->
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:layout_marginTop="10dp"
-            android:paddingHorizontal="20dp">
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvAssets"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:nestedScrollingEnabled="false"
-                android:overScrollMode="never" />
-
-            <LinearLayout
-                android:id="@+id/emptyStateContainer"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:visibility="gone">
-
-                <ImageView
-                    android:layout_width="80dp"
-                    android:layout_height="80dp"
-                    android:src="@drawable/ic_empty_wallet"
-                    android:alpha="0.3" />
-
-                <TextView
                     android:layout_width="wrap_content"
+                    android:layout_gravity="center"
                     android:layout_height="wrap_content"
-                    android:text="No tokens yet"
-                    android:textSize="15sp"
-                    android:textColor="#808080"
-                    android:fontFamily="@font/inter_medium" />
-            </LinearLayout>
-        </FrameLayout>
+                    android:gravity="center"
+                    android:layout_marginTop="24dp"
+                    android:weightSum="3">
 
-            <!-- 🔹 Эффект конфетти -->
+                    <LinearLayout
+                        android:id="@+id/btnReceive"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:layout_marginHorizontal="14dp">
+
+                        <ImageView
+                            android:layout_width="50dp"
+                            android:layout_height="50dp"
+                            android:src="@drawable/receive_ic"
+                            android:background="@drawable/btn_circle"
+                            android:padding="14dp" />
+
+                        <TextView
+                            android:text="Receive"
+                            android:textColor="#75FFFFFF"
+                            android:textSize="12sp"
+                            android:fontFamily="@font/inter_semibold"
+                            android:layout_marginTop="1dp"
+                            android:layout_height="wrap_content"
+                            android:layout_width="wrap_content" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/btnSend"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:layout_marginHorizontal="14dp">
+
+                        <ImageView
+                            android:layout_width="50dp"
+                            android:layout_height="50dp"
+                            android:src="@drawable/send_ic"
+                            android:background="@drawable/btn_circle"
+                            android:padding="14dp" />
+
+                        <TextView
+                            android:text="Send"
+                            android:textColor="#75FFFFFF"
+                            android:textSize="12sp"
+                            android:fontFamily="@font/inter_semibold"
+                            android:layout_marginTop="1dp"
+                            android:layout_height="wrap_content"
+                            android:layout_width="wrap_content" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/btnBuy"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:layout_marginHorizontal="14dp">
+
+                        <ImageView
+                            android:layout_width="50dp"
+                            android:layout_height="50dp"
+                            android:src="@drawable/buy_ic"
+                            android:background="@drawable/btn_circle"
+                            android:padding="14dp" />
+
+                        <TextView
+                            android:text="Buy"
+                            android:textColor="#75FFFFFF"
+                            android:textSize="12sp"
+                            android:fontFamily="@font/inter_semibold"
+                            android:layout_marginTop="1dp"
+                            android:layout_height="wrap_content"
+                            android:layout_width="wrap_content" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvMyAssets"
+                    android:text="My Assets"
+                    android:textColor="@android:color/white"
+                    android:textSize="14sp"
+                    android:fontFamily="@font/inter_semibold"
+                    android:layout_marginStart="20dp"
+                    android:layout_marginTop="50dp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+                <FrameLayout
+                    android:id="@+id/tabSection"
+                    android:layout_width="match_parent"
+                    android:layout_height="37dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginHorizontal="20dp"
+                    android:background="@drawable/tab_section_bordered">
+
+                    <View
+                        android:id="@+id/activeTabBg"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_gravity="start"
+                        android:background="@drawable/btn_green_rounded" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:id="@+id/btnTokens"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="match_parent"
+                            android:gravity="center">
+
+                            <TextView
+                                android:text="Tokens"
+                                android:textSize="14sp"
+                                android:textColor="#262626"
+                                android:fontFamily="@font/inter_semibold"
+                                android:layout_height="wrap_content"
+                                android:layout_width="wrap_content" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/btnCollectibles"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="match_parent"
+                            android:gravity="center">
+
+                            <TextView
+                                android:text="Collectibles"
+                                android:textSize="14sp"
+                                android:textColor="#50FFFFFF"
+                                android:fontFamily="@font/inter_semibold"
+                                android:layout_height="wrap_content"
+                                android:layout_width="wrap_content" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </FrameLayout>
+            </LinearLayout>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginTop="10dp"
+                android:paddingHorizontal="20dp">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvAssets"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:nestedScrollingEnabled="false"
+                    android:overScrollMode="never" />
+
+                <LinearLayout
+                    android:id="@+id/emptyStateContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:src="@drawable/ic_empty_wallet"
+                        android:alpha="0.3" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="No tokens yet"
+                        android:textSize="15sp"
+                        android:textColor="#808080"
+                        android:fontFamily="@font/inter_medium" />
+                </LinearLayout>
+            </FrameLayout>
+
+        </LinearLayout>
+
         <include
             android:id="@+id/confettiOverlay"
             layout="@layout/confetti_overlay"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-    </LinearLayout>
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone"
+            tools:visibility="visible"/>
+    </FrameLayout>
 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

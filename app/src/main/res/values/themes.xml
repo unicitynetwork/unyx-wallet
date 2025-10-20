@@ -1,15 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.UnicityWallet" parent="Theme.MaterialComponents.DayNight.NoActionBar" />
+    <style name="Theme.UnicityWallet" parent="Theme.AppCompat.DayNight.NoActionBar" />
 
-
-    <!-- Full screen dialog style -->
-    <style name="FullScreenDialog" parent="Theme.MaterialComponents.Light.Dialog">
-        <item name="android:windowNoTitle">true</item>
+    <style name="FullScreenDialog" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowIsTranslucent">false</item>
         <item name="android:windowFullscreen">false</item>
-        <item name="android:windowIsFloating">false</item>
-        <item name="android:windowBackground">@color/background</item>
-        <item name="android:windowAnimationStyle">@android:style/Animation.Dialog</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="DarkFullScreenDialog" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- Диалог без белого фона -->
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+
+        <!-- Убираем белую полосу -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+
+        <!-- Светлые иконки в статус-баре -->
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>
