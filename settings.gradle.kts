@@ -16,5 +16,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "UnicityWallet"
 include(":app")
+// use symlink until released and published
 include(":unicity-nostr-sdk")
  
