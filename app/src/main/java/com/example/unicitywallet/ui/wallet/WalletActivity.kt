@@ -4,17 +4,31 @@ import android.animation.ObjectAnimator
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
 import com.example.unicitywallet.R
 import com.example.unicitywallet.databinding.ActivityWalletHomeBinding
+import com.example.unicitywallet.viewmodel.WalletViewModel
+import kotlinx.coroutines.launch
+import kotlin.getValue
 
 class WalletActivity : AppCompatActivity() {
     private lateinit var binding: ActivityWalletHomeBinding
+    private val viewModel: WalletViewModel by viewModels()
     private var selectedIndex = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityWalletHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Collect history flows to keep them active
+        lifecycleScope.launch {
+            viewModel.incomingHistory.collect { /* Keep flow active */ }
+        }
+        lifecycleScope.launch {
+            viewModel.outgoingHistory.collect { /* Keep flow active */ }
+        }
 
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
@@ -53,7 +67,7 @@ class WalletActivity : AppCompatActivity() {
                 if (selectedIndex != index) {
                     moveIndicatorTo(index)
                     highlightTab(index, icons)
-//                    changeFragment(index)
+                    changeFragment(index)
                     selectedIndex = index
                 }
             }
@@ -81,19 +95,19 @@ class WalletActivity : AppCompatActivity() {
         }
     }
 
-//    private fun changeFragment(index: Int) {
-//        val fragment = when (index) {
-//            0 -> WalletFragment()
-//            1 -> HistoryFragment()
+    private fun changeFragment(index: Int) {
+        val fragment = when (index) {
+            0 -> WalletFragment()
+            1 -> HistoryFragment()
 //            2 -> ChatFragment()
 //            3 -> NotificationsFragment()
 //            4 -> ProfileFragment()
-//            else -> WalletFragment()
-//        }
-//
-//        supportFragmentManager.beginTransaction()
+            else -> WalletFragment()
+        }
+
+        supportFragmentManager.beginTransaction()
 //            .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
-//            .replace(R.id.fragmentContainer, fragment)
-//            .commit()
-//    }
+            .replace(R.id.fragmentContainer, fragment)
+            .commit()
+    }
 }

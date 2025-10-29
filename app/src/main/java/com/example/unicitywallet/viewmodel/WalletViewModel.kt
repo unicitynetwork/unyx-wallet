@@ -9,6 +9,8 @@ import com.example.unicitywallet.data.model.AggregatedAsset
 import com.example.unicitywallet.data.model.CryptoCurrency
 import com.example.unicitywallet.data.model.Token
 import com.example.unicitywallet.data.model.TokenStatus
+import com.example.unicitywallet.data.model.TransactionEvent
+import com.example.unicitywallet.data.model.TransactionType
 import com.example.unicitywallet.data.repository.WalletRepository
 import com.example.unicitywallet.services.CryptoPriceService
 import kotlinx.coroutines.Job
@@ -39,6 +41,47 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000), emptyList())
 
     val isLoading: StateFlow<Boolean> = repository.isLoading
+
+    val transactionHistory: StateFlow<List<TransactionEvent>> = repository.tokens
+        .map { tokenList ->
+            Log.d("WalletViewModel", "Building transaction history from ${tokenList.size} tokens")
+            val events = mutableListOf<TransactionEvent>()
+
+            tokenList.forEach { token ->
+                Log.d("WalletViewModel", "Token: ${token.name}, status=${token.status}")
+
+                // Skip burned tokens (never received by user)
+                if (token.status == TokenStatus.BURNED) {
+                    Log.d("WalletViewModel", "Skipping BURNED token")
+                    return@forEach
+                }
+
+                // Every token was received at some point
+                events.add(
+                    TransactionEvent(
+                        token = token,
+                        type = TransactionType.RECEIVED
+                    )
+                )
+                Log.d("WalletViewModel", "Added RECEIVED event")
+
+                // If transferred, also add sent event
+                if (token.status == TokenStatus.TRANSFERRED) {
+                    events.add(
+                        TransactionEvent(
+                            token = token,
+                            type = TransactionType.SENT
+                        )
+                    )
+                    Log.d("WalletViewModel", "Added SENT event")
+                }
+            }
+
+            Log.d("WalletViewModel", "Total events created: ${events.size}")
+            // Sort by timestamp (most recent first)
+            events.sortedByDescending { it.timestamp }
+        }
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, emptyList())
 
     // Outgoing transaction history (transferred tokens)
     val outgoingHistory: StateFlow<List<Token>> = repository.tokens

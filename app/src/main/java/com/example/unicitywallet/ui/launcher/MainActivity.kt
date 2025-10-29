@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.unicitywallet.identity.IdentityManager
 import com.example.unicitywallet.ui.wallet.WalletActivity
 import com.example.unicitywallet.ui.onboarding.welcome.WelcomeActivity
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
     private lateinit var identityManager: IdentityManager
@@ -13,7 +14,15 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         identityManager = IdentityManager(this)
 
-        if (identityManager.hasIdentity()) {
+        // Путь к внутренней директории приложения
+        val nametagsDir = File(filesDir, "nametags")
+
+        // Проверяем, существует ли папка и не пуста ли она
+        val hasNametags = nametagsDir.exists() &&
+                nametagsDir.isDirectory &&
+                nametagsDir.listFiles()?.isNotEmpty() == true
+
+        if (identityManager.hasIdentity() && hasNametags) {
             startActivity(Intent(this, WalletActivity::class.java))
         } else {
             startActivity(Intent(this, WelcomeActivity::class.java))

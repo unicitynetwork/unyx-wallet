@@ -61,24 +61,37 @@ class IdentityManager(context: Context) {
         Pair(identity, words)
     }
 
-    suspend fun restoreFromSeedPhrase(words: List<String>): UserIdentity = withContext(Dispatchers.IO) {
-        // Validate word count
-        require(words.size == WORD_COUNT) { "Invalid seed phrase length. Expected $WORD_COUNT words." }
+    suspend fun restoreFromSeedPhrase(words: List<String>): UserIdentity? = withContext(Dispatchers.IO) {
+        try {
+            if (words.size != WORD_COUNT) {
+                Log.e(TAG, "Invalid seed phrase length: ${words.size}")
+                return@withContext null
+            }
 
-        // Create mnemonic from words - join words into a phrase
-        val phrase = words.joinToString(" ")
-        val mnemonicCode = Mnemonics.MnemonicCode(phrase)
+            // Create mnemonic from words - join words into a phrase
+            val phrase = words.joinToString(" ")
+            val mnemonicCode = Mnemonics.MnemonicCode(phrase)
 
-        // Derive seed
-        val seed = mnemonicCode.toSeed()
+            // Derive seed
+            val seed = mnemonicCode.toSeed()
+            if (seed.isEmpty()) {
+                Log.e(TAG, "Seed generation failed")
+                return@withContext null
+            }
 
-        // Create identity from seed
-        val identity = deriveIdentityFromSeed(seed)
+            val identity = deriveIdentityFromSeed(seed)
+            if (identity.privateKey.isEmpty()) {
+                Log.e(TAG, "Identity derivation failed")
+                return@withContext null
+            }
+            // Store the new seed phrase
+            storeSeedPhrase(words)
+            identity
 
-        // Store the new seed phrase
-        storeSeedPhrase(words)
-
-        identity
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to restore from seed phrase", e)
+            null
+        }
     }
 
     suspend fun getCurrentIdentity(): UserIdentity? = withContext(Dispatchers.IO) {

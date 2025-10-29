@@ -14,4 +14,22 @@
         <item name="android:stateListAnimator">@null</item>
         <item name="android:elevation">@dimen/elevation_sm</item>
     </style>
+
+    <style name="SeedField">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">50dp</item>
+        <item name="android:layout_columnWeight">1</item>
+        <item name="android:layout_rowWeight">1</item>
+        <item name="android:background">@drawable/bg_nametag_selector</item>
+        <item name="backgroundTint">#FFFFFF</item>
+        <item name="android:paddingLeft">14dp</item>
+        <item name="android:paddingRight">14dp</item>
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textColorHint">#80FFFFFF</item>
+        <item name="android:inputType">textNoSuggestions|textVisiblePassword</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:imeOptions">actionNext</item>
+        <item name="android:layout_marginVertical">20dp</item>
+        <item name="android:layout_marginHorizontal">8dp</item>
+    </style>
 </resources>

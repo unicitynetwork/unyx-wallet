@@ -69,6 +69,8 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
 
     private var currentContactDialog: ContactListDialog? = null
 
+    private var currentNametagString: String? = null
+
     // Crypto received receiver (for demo crypto transfers via Nostr)
     private val cryptoReceivedReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -126,6 +128,11 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
     }
 
     private fun setupUI(){
+        val prefs = requireContext()
+            .getSharedPreferences("UnicityWalletPrefs", Context.MODE_PRIVATE)
+        currentNametagString = prefs.getString("unicity_tag", null)
+
+        binding.tvNametag.text = currentNametagString
         binding.btnSend.setOnClickListener {
             if(selectedIndex == 0) {
                 val assets = viewModel.aggregatedAssets.value
@@ -148,7 +155,11 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
     }
 
     private fun setupRecycler(){
-        tokensAdapter = TokensAdapter()
+        tokensAdapter = TokensAdapter(
+            onSendClick = { token ->
+                showTokenSendMethodDialog(token)
+            }
+        )
         assetsAdapter = AssetsAdapter(selectedCurrency)
         binding.rvAssets.apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -309,6 +320,30 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
     private fun showSendDialog() {
         // First show contact list
         showContactListDialog()
+    }
+
+    private fun showTokenSendMethodDialog(token: Token) {
+        currentContactDialog = ContactListDialog(
+            context = requireContext(),
+            onContactSelected = { selectedContact ->
+                if (selectedContact.hasUnicityTag()) {
+                    // Get asset info for this token
+                    val asset = viewModel.aggregatedAssets.value.find { it.coinId == token.coinId }
+                    if (asset != null) {
+                        sendTokenViaNostr(token, selectedContact)
+                    } else {
+                        Toast.makeText(requireContext(), "Asset not found", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    AlertDialog.Builder(requireContext())
+                        .setTitle("Cannot Send")
+                        .setMessage("This contact doesn't have a @unicity nametag. Transfers require @unicity nametags.")
+                        .setPositiveButton("OK", null)
+                        .show()
+                }
+            }
+        )
+        currentContactDialog?.show()
     }
 
     private fun showContactListDialog() {
@@ -557,7 +592,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 val signingService = SigningService.createFromSecret(secret)
 
                 // Step 5: Execute split if needed
-                val tokensToTransfer = mutableListOf<org.unicitylabs.sdk.token.Token<*>>()
+//                val tokensToTransfer = mutableListOf<org.unicitylabs.sdk.token.Token<*>>()
                 var successCount = 0 // Track successful regular transfers
                 var splitResult: TokenSplitExecutor.SplitExecutionResult? = null
 

@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="@drawable/welcome_bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="20dp">
+
+        <!-- Градиентная «шапка» -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <TextView
+                    android:id="@+id/titleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Enter your"
+                    android:textColor="#FFF6F6"
+                    android:textSize="32sp"
+                    android:alpha="0.5"
+                    android:fontFamily="@font/inter_bold"/>
+
+                <TextView
+                    android:id="@+id/titleBig"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Recovery phrase"
+                    android:textColor="#FFF6F6"
+                    android:textSize="40sp"
+                    android:fontFamily="@font/inter_bold"/>
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- Сетка 2х6 для 12 слов -->
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="2"
+            android:rowCount="6"
+            android:useDefaultMargins="true"
+            android:alignmentMode="alignMargins"
+            android:rowOrderPreserved="false"
+            android:layout_marginTop="16dp">
+
+            <!-- Левая колонка -->
+            <EditText
+                android:id="@+id/word1"
+                style="@style/SeedField"
+                android:hint="1."/>
+            <EditText
+                android:id="@+id/word2"
+                style="@style/SeedField"
+                android:hint="2."/>
+            <EditText
+                android:id="@+id/word3"
+                style="@style/SeedField"
+                android:hint="3."/>
+            <EditText
+                android:id="@+id/word4"
+                style="@style/SeedField"
+                android:hint="4."/>
+            <EditText
+                android:id="@+id/word5"
+                style="@style/SeedField"
+                android:hint="5."/>
+            <EditText
+                android:id="@+id/word6"
+                style="@style/SeedField"
+                android:hint="6."/>
+
+            <!-- Правая колонка -->
+            <EditText
+                android:id="@+id/word7"
+                style="@style/SeedField"
+                android:hint="7."/>
+            <EditText
+                android:id="@+id/word8"
+                style="@style/SeedField"
+                android:hint="8."/>
+            <EditText
+                android:id="@+id/word9"
+                style="@style/SeedField"
+                android:hint="9."/>
+            <EditText
+                android:id="@+id/word10"
+                style="@style/SeedField"
+                android:hint="10."/>
+            <EditText
+                android:id="@+id/word11"
+                style="@style/SeedField"
+                android:hint="11."/>
+            <EditText
+                android:id="@+id/word12"
+                style="@style/SeedField"
+                android:hint="12."/>
+        </GridLayout>
+
+        <!-- Кнопка импорта -->
+        <Button
+            android:id="@+id/btnImport"
+            android:layout_width="280dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="34dp"
+            android:background="@drawable/btn_green_rounded"
+            android:text="Import Wallet"
+            android:textAllCaps="false"
+            android:textColor="#262626"
+            android:textSize="18sp"
+            android:fontFamily="@font/inter_semibold"/>
+
+        <Button
+            android:id="@+id/btnCancel"
+            android:layout_width="280dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/btn_white_border"
+            android:text="Cancel"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:fontFamily="@font/inter_semibold"/>
+    </LinearLayout>
+</ScrollView>

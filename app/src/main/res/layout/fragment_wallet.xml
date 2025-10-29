@@ -49,7 +49,7 @@
                         >
 
                         <TextView
-                            android:id="@+id/tvWalletAddress"
+                            android:id="@+id/tvNametag"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="nametag"
@@ -142,7 +142,7 @@
                         <ImageView
                             android:layout_width="50dp"
                             android:layout_height="50dp"
-                            android:src="@drawable/receive_ic"
+                            android:src="@drawable/ic_receive"
                             android:background="@drawable/btn_circle"
                             android:padding="14dp" />
 
@@ -168,7 +168,7 @@
                         <ImageView
                             android:layout_width="50dp"
                             android:layout_height="50dp"
-                            android:src="@drawable/send_ic"
+                            android:src="@drawable/ic_send"
                             android:background="@drawable/btn_circle"
                             android:padding="14dp" />
 

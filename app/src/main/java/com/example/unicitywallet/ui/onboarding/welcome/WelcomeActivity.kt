@@ -8,9 +8,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.example.unicitywallet.data.model.Token
 import com.example.unicitywallet.data.model.Wallet
-import com.example.unicitywallet.data.repository.WalletRepository
 import com.example.unicitywallet.databinding.ActivityWelcomeBinding
 import com.example.unicitywallet.identity.IdentityManager
 import com.example.unicitywallet.ui.onboarding.createNameTag.CreateNameTagActivity
@@ -18,6 +16,7 @@ import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.util.UUID
 import androidx.core.content.edit
+import com.example.unicitywallet.ui.onboarding.restoreWallet.RestoreWalletActivity
 
 class WelcomeActivity : AppCompatActivity() {
     private lateinit var identityManager: IdentityManager
@@ -31,14 +30,15 @@ class WelcomeActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         identityManager = IdentityManager(applicationContext)
-        sharedPreferences = getSharedPreferences("wallet_prefs", android.content.Context.MODE_PRIVATE)
+        sharedPreferences = getSharedPreferences("wallet_prefs",MODE_PRIVATE)
 
         binding.btnCreateWallet.setOnClickListener {
             createWallet()
         }
 
         binding.btnRecoverWallet.setOnClickListener {
-            // TODO: implement wallet recovery
+            startActivity(Intent(this@WelcomeActivity, RestoreWalletActivity::class.java))
+            finish()
         }
     }
 
@@ -47,17 +47,19 @@ class WelcomeActivity : AppCompatActivity() {
             try {
                 showLoading(true)
 
-                val (identity, words) = identityManager.generateNewIdentity()
+                if(!identityManager.hasIdentity()){
+                    val (identity, words) = identityManager.generateNewIdentity()
 
-                val wallet = Wallet(
-                    id = UUID.randomUUID().toString(),
-                    name = "My Wallet",
-                    address = identity.address,
-                    tokens = emptyList()
-                )
+                    val wallet = Wallet(
+                        id = UUID.randomUUID().toString(),
+                        name = "My Wallet",
+                        address = identity.address,
+                        tokens = emptyList()
+                    )
 
-                val walletJson = Gson().toJson(wallet)
-                sharedPreferences.edit { putString("wallet", walletJson) }
+                    val walletJson = Gson().toJson(wallet)
+                    sharedPreferences.edit { putString("wallet", walletJson) }
+                }
 
                 startActivity(Intent(this@WelcomeActivity, CreateNameTagActivity::class.java))
                 finish()

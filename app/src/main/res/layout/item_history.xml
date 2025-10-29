@@ -1,19 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/itemToken"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="72dp"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:paddingVertical="8dp">
+    android:paddingVertical="4dp"
+    android:paddingStart="6dp"
+    android:paddingEnd="12dp"
+    android:layout_marginBottom="10dp"
+    android:background="@drawable/bg_nametag_selector">
 
-    <!-- Token Icon -->
+    <!-- Transaction Icon -->
     <ImageView
-        android:id="@+id/imgTokenIcon"
+        android:id="@+id/imgTxType"
         android:layout_width="44dp"
         android:layout_height="44dp"
-        android:layout_marginEnd="12dp"
+        android:layout_marginEnd="6dp"
         android:scaleType="centerInside" />
 
     <!-- Left Part: Name and Ticker -->
@@ -24,19 +26,19 @@
         android:orientation="vertical">
 
         <TextView
-            android:id="@+id/tvTokenName"
+            android:id="@+id/tvTransactionType"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Bitcoin"
+            android:text="Sent"
             android:textColor="@android:color/white"
             android:fontFamily="@font/inter_semibold"
             android:textSize="14sp" />
 
         <TextView
-            android:id="@+id/tvTokenSymbol"
+            android:id="@+id/tvDate"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="BTC · $111,220.1"
+            android:text="To"
             android:textColor="#80FFFFFF"
             android:fontFamily="@font/inter_semibold"
             android:textSize="12sp" />
@@ -49,10 +51,14 @@
         android:orientation="vertical"
         android:gravity="end">
 
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_chevron_right"
-            app:tint="#FFFFFF" />
+        <TextView
+            android:id="@+id/tvAmount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="- 0.132 SOL"
+            android:textColor="@android:color/white"
+            android:fontFamily="@font/inter_bold"
+            android:textSize="15sp" />
+
     </LinearLayout>
 </LinearLayout>

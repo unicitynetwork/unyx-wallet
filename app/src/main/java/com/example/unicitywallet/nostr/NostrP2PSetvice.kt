@@ -345,17 +345,28 @@ class NostrP2PService(
     private fun subscribeToEvents(webSocket: WebSocket) {
         val publicKey = keyManager.getPublicKey()
 
+        val prefs = context.getSharedPreferences("NostrP2PService", Context.MODE_PRIVATE)
+        val lastCheckTimestamp = prefs.getLong("last_message_check", 0)
+        val now = System.currentTimeMillis() / 1000
+
+        val sinceTimestamp = if (lastCheckTimestamp == 0L || (now - lastCheckTimestamp) > 86400) {
+            now - 86400  // Last 24 hours
+        } else {
+            lastCheckTimestamp
+        }
+
+        Log.d(TAG, "Subscribing to messages since: $sinceTimestamp (${(now - sinceTimestamp) / 3600} hours ago)")
         // Subscribe to messages for us
         val filters = listOf(
             mapOf(
                 "kinds" to listOf(KIND_ENCRYPTED_DM, KIND_GIFT_WRAP, KIND_TOKEN_TRANSFER),
                 "#p" to listOf(publicKey),
-                "since" to (System.currentTimeMillis() / 1000) // Only new events from now
+                "since" to sinceTimestamp // Fetch historical messages from last check
             ),
             mapOf(
                 "kinds" to listOf(KIND_AGENT_LOCATION, KIND_AGENT_PROFILE),
                 "#t" to listOf("unicity-agent"),
-                "since" to (System.currentTimeMillis() / 1000 - 3600) // Last hour
+                "since" to (now - 3600) // Last hour for agent discovery
             )
         )
 
@@ -365,6 +376,8 @@ class NostrP2PService(
         }
 
         webSocket.send(JsonMapper.toJson(request))
+
+        prefs.edit().putLong("last_message_check", now).apply()
     }
 
     /**
