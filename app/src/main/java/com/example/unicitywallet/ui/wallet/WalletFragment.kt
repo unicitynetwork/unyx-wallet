@@ -20,6 +20,7 @@ import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -42,6 +43,9 @@ import com.example.unicitywallet.transfer.TokenSplitCalculator
 import com.example.unicitywallet.transfer.TokenSplitExecutor
 import com.example.unicitywallet.transfer.toHexString
 import com.example.unicitywallet.viewmodel.WalletViewModel
+import com.example.unicitywallet.data.contact.ContactDatabase
+import com.example.unicitywallet.data.repository.ContactRepository
+import com.example.unicitywallet.utils.ContactsHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -61,6 +65,8 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
     private lateinit var assetsAdapter: AssetsAdapter
     private lateinit var transferDetailsText: TextView
     private lateinit var confettiContainer: FrameLayout
+
+    private lateinit var contactRepository: ContactRepository
     private var dialogDismissRunnable: Runnable? = null
     private val dialogHandler = Handler(Looper.getMainLooper())
     private var selectedCurrency = "USD"
@@ -111,6 +117,10 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
         super.onViewCreated(view, savedInstanceState)
         binding = FragmentWalletBinding.bind(view)
 
+        val db = ContactDatabase.getInstance(requireContext())
+        val helper = ContactsHelper(requireContext())
+        contactRepository = ContactRepository(helper, db.contactDao())
+
         startNostrService()
 
         setupUI()
@@ -137,7 +147,17 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
             if(selectedIndex == 0) {
                 val assets = viewModel.aggregatedAssets.value
                 if(assets.isNotEmpty()){
-                    showSendDialog()
+                    showRecipientSelectionDialog { recipient ->
+                        if (recipient.hasUnicityTag()) {
+                            showCryptoSelectionForRecipient(recipient.unicityId!!)
+                        } else {
+                            AlertDialog.Builder(requireContext())
+                                .setTitle("Cannot Send")
+                                .setMessage("Unknown @unicity tag. You can only send to contacts with @unicity tag.")
+                                .setPositiveButton("OK", null)
+                                .show()
+                        }
+                    }
                 } else {
                     Toast.makeText(requireContext(), "No assets to transfer", Toast.LENGTH_SHORT).show()
                 }
@@ -157,7 +177,22 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
     private fun setupRecycler(){
         tokensAdapter = TokensAdapter(
             onSendClick = { token ->
-                showTokenSendMethodDialog(token)
+                showRecipientSelectionDialog { recipientContact ->
+                    if (recipientContact.hasUnicityTag()) {
+                        val asset = viewModel.aggregatedAssets.value.find { it.coinId == token.coinId }
+                        if (asset != null) {
+                            sendTokenViaNostr(token, recipientContact)
+                        } else {
+                            Toast.makeText(requireContext(), "Asset not found", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        AlertDialog.Builder(requireContext())
+                            .setTitle("Cannot Send")
+                            .setMessage("This contact doesn't have a @unicity nametag. Transfers require @unicity nametags.")
+                            .setPositiveButton("OK", null)
+                            .show()
+                    }
+                }
             }
         )
         assetsAdapter = AssetsAdapter(selectedCurrency)
@@ -317,52 +352,77 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
         }
     }
 
-    private fun showSendDialog() {
-        // First show contact list
-        showContactListDialog()
-    }
+//    private fun showTokenSendMethodDialog(token: Token) {
+//        currentContactDialog = ContactListDialog(
+//            context = requireContext(),
+//            onContactSelected = { selectedContact ->
+//                if (selectedContact.hasUnicityTag()) {
+//                    // Get asset info for this token
+//                    val asset = viewModel.aggregatedAssets.value.find { it.coinId == token.coinId }
+//                    if (asset != null) {
+//                        sendTokenViaNostr(token, selectedContact)
+//                    } else {
+//                        Toast.makeText(requireContext(), "Asset not found", Toast.LENGTH_SHORT).show()
+//                    }
+//                } else {
+//                    AlertDialog.Builder(requireContext())
+//                        .setTitle("Cannot Send")
+//                        .setMessage("This contact doesn't have a @unicity nametag. Transfers require @unicity nametags.")
+//                        .setPositiveButton("OK", null)
+//                        .show()
+//                }
+//            }
+//        )
+//        currentContactDialog?.show()
+//    }
 
-    private fun showTokenSendMethodDialog(token: Token) {
-        currentContactDialog = ContactListDialog(
-            context = requireContext(),
-            onContactSelected = { selectedContact ->
-                if (selectedContact.hasUnicityTag()) {
-                    // Get asset info for this token
-                    val asset = viewModel.aggregatedAssets.value.find { it.coinId == token.coinId }
-                    if (asset != null) {
-                        sendTokenViaNostr(token, selectedContact)
-                    } else {
-                        Toast.makeText(requireContext(), "Asset not found", Toast.LENGTH_SHORT).show()
-                    }
-                } else {
-                    AlertDialog.Builder(requireContext())
-                        .setTitle("Cannot Send")
-                        .setMessage("This contact doesn't have a @unicity nametag. Transfers require @unicity nametags.")
-                        .setPositiveButton("OK", null)
-                        .show()
-                }
+    private fun showRecipientSelectionDialog(onRecipientConfirmed: (Contact) -> Unit) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_select_recipient, null)
+        val etNametag = dialogView.findViewById<EditText>(R.id.etNametag)
+        val btnOpenContacts = dialogView.findViewById<ImageButton>(R.id.btnOpenContacts)
+        val btnContinue = dialogView.findViewById<Button>(R.id.btnContinue)
+        val btnBack = dialogView.findViewById<Button>(R.id.btnBack)
+
+        val dialog = Dialog(requireContext(), R.style.FullScreenDialog)
+        dialog.setContentView(dialogView)
+
+        btnOpenContacts.setOnClickListener {
+            showContactListDialog { selectedContact ->
+                etNametag.setText(selectedContact.unicityId ?: "")
             }
-        )
-        currentContactDialog?.show()
+        }
+
+        btnContinue.setOnClickListener {
+            val nametag = etNametag.text.toString().trim()
+            if (nametag.isEmpty()) {
+                Toast.makeText(requireContext(), "Please enter a recipient", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val recipientContact = Contact(
+                id = "temp_${nametag}",
+                name = nametag.split("@").firstOrNull() ?: nametag,
+                unicityId = nametag,
+                isFromPhone = false
+            )
+
+            onRecipientConfirmed(recipientContact)
+
+            dialog.dismiss()
+        }
+
+        btnBack.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 
-    private fun showContactListDialog() {
+    private fun showContactListDialog(onContactSelected: (Contact) -> Unit) {
         currentContactDialog = ContactListDialog(
             context = requireContext(),
-            onContactSelected = { selectedContact ->
-                // Check if contact has @unicity tag
-                if (selectedContact.hasUnicityTag()) {
-                    // After contact is selected, show asset selection dialog
-                    showCryptoSelectionForRecipient(selectedContact)
-                } else {
-                    // Show warning for non-@unicity contacts
-                    AlertDialog.Builder(requireContext())
-                        .setTitle("Cannot Send")
-                        .setMessage("Unknown @unicity tag. You can only send to contacts with @unicity tag.")
-                        .setPositiveButton("OK", null)
-                        .show()
-                }
-            },
+            repository = contactRepository,
+            onContactSelected = onContactSelected,
             onRequestPermission = { permission, requestCode ->
                 // Request the permission
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -373,7 +433,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
         currentContactDialog?.show()
     }
 
-    private fun showCryptoSelectionForRecipient(recipient: Contact) {
+    private fun showCryptoSelectionForRecipient(recipient: String) {
         val assets = viewModel.aggregatedAssets.value
 
         if (assets.isEmpty()) {
@@ -415,7 +475,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
         dialog.show()
     }
 
-    private fun showAssetSendAmountDialog(asset: AggregatedAsset, selectedContact: Contact) {
+    private fun showAssetSendAmountDialog(asset: AggregatedAsset, recipient: String) {
         // Get all tokens for this coinId
         Log.d("WalletFragment", "Here is an asset to send ${asset} and coinId ${asset.coinId}")
         val tokensForCoin = viewModel.getTokensByCoinId(asset.coinId)
@@ -461,7 +521,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                         tokensForCoin = tokensForCoin,
                         targetAmount = amountInSmallestUnit,
                         asset = asset,
-                        recipient = selectedContact
+                        recipient = recipient
                     )
 
                     dialog.dismiss()
@@ -483,7 +543,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
         tokensForCoin: List<Token>,
         targetAmount: java.math.BigInteger,
         asset: AggregatedAsset,
-        recipient: Contact
+        recipient: String
     ) {
         lifecycleScope.launch {
             // Show progress dialog (outside try so it's always accessible for dismiss)
@@ -564,7 +624,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 Log.d("WalletFragment", "Split plan created: ${splitPlan.describe()}")
 
                 // Step 2: Extract recipient nametag
-                val recipientNametag = recipient.address
+                val recipientNametag = recipient
                     ?.removePrefix("@")
                     ?.removeSuffix("@unicity")
                     ?.trim()
@@ -768,7 +828,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 if (totalSent > 0) {
                     vibrateSuccess()
                     val formattedAmount = targetAmount.toDouble() / Math.pow(10.0, asset.decimals.toDouble())
-                    showSuccessDialog("Successfully sent $formattedAmount ${asset.symbol} to ${recipient.name}")
+                    showSuccessDialog("Successfully sent $formattedAmount ${asset.symbol} to ${recipient}")
                 } else {
                     Toast.makeText(requireContext(), "Transfer failed", Toast.LENGTH_LONG).show()
                 }
@@ -805,7 +865,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 Toast.makeText(requireContext(), "Sending to ${recipient.name}...", Toast.LENGTH_SHORT).show()
 
                 // Step 1: Extract recipient nametag from contact
-                val recipientNametag = recipient.address
+                val recipientNametag = recipient.unicityId
                     ?.removePrefix("@")
                     ?.removeSuffix("@unicity")
                     ?.trim()
