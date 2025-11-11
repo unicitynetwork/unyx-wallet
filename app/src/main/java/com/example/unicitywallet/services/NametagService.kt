@@ -7,6 +7,7 @@ import android.net.NetworkCapabilities
 import android.util.Log
 import cash.z.ecc.android.random.SecureRandom
 import com.example.unicitywallet.identity.IdentityManager
+import com.example.unicitywallet.utils.HexUtils
 import com.example.unicitywallet.utils.WalletConstants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -27,9 +28,8 @@ import org.unicitylabs.sdk.token.TokenId
 import org.unicitylabs.sdk.token.TokenState
 import org.unicitylabs.sdk.token.TokenType
 import org.unicitylabs.sdk.transaction.MintCommitment
-import org.unicitylabs.sdk.transaction.MintTransactionData
+import org.unicitylabs.sdk.transaction.MintTransaction
 import org.unicitylabs.sdk.transaction.MintTransactionReason
-import org.unicitylabs.sdk.transaction.NametagMintTransactionData
 import org.unicitylabs.sdk.util.InclusionProofUtils
 import org.unicitylabs.sdk.verification.VerificationException
 import java.io.File
@@ -85,9 +85,9 @@ class NametagService(
             val identity = identityManager.getCurrentIdentity()
                 ?: throw IllegalStateException("No wallet identity found")
 
-            val secret = hexToBytes(identity.privateKey)
+            val secret = HexUtils.decodeHex(identity.privateKey)
             val signingService = SigningService.createFromSecret(secret)
-            val nametagTokenType = TokenType(hexToBytes(WalletConstants.UNICITY_TOKEN_TYPE))
+            val nametagTokenType = TokenType(HexUtils.decodeHex(WalletConstants.UNICITY_TOKEN_TYPE))
 
             // Get the wallet's direct address as the target for this nametag
             val nametagAddress = identityManager.getWalletAddress()
@@ -96,7 +96,7 @@ class NametagService(
             // Submit the mint commitment with retry logic
             var submitResponse: SubmitCommitmentResponse? = null
             var lastException: Exception? = null
-            var mintCommitment: MintCommitment<NametagMintTransactionData<MintTransactionReason>>? = null
+            var mintCommitment: MintCommitment<MintTransactionReason>? = null
 
             for(attempt in 1..MAX_RETRY_ATTEMPTS){
                 try {
@@ -106,7 +106,7 @@ class NametagService(
                         SecureRandom().nextBytes(this)
                     }
 
-                    val mintTransactionData: NametagMintTransactionData<MintTransactionReason> = NametagMintTransactionData(
+                    val mintTransactionData = MintTransaction.NametagData(
                         nametag,
                         nametagTokenType,
                         nametagAddress,
@@ -168,7 +168,7 @@ class NametagService(
 
             val genesisTransaction = mintCommitment!!.toTransaction(inclusionProof)
 
-            val mintSalt = (mintCommitment.transactionData as NametagMintTransactionData<MintTransactionReason>).salt
+            val mintSalt = (mintCommitment.getTransactionData() as MintTransaction.NametagData).salt
 
             val nametagPredicate = UnmaskedPredicate.create(
                 nametagTokenId,
@@ -293,15 +293,6 @@ class NametagService(
 
         val filename = "$NAMETAG_FILE_PREFIX${nametagString.hashCode()}$NAMETAG_FILE_SUFFIX"
         return File(nametagDir, filename)
-    }
-
-    private fun hexToBytes(hex: String): ByteArray {
-        val len = hex.length
-        val data = ByteArray(len / 2)
-        for (i in 0 until len step 2) {
-            data[i / 2] = ((Character.digit(hex[i], 16) shl 4) + Character.digit(hex[i + 1], 16)).toByte()
-        }
-        return data
     }
 
     suspend fun listAllNametags(): List<String> = withContext(Dispatchers.IO) {

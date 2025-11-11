@@ -10,6 +10,7 @@ import com.example.unicitywallet.p2p.IP2PService
 import com.example.unicitywallet.services.NametagService
 import com.example.unicitywallet.services.ServiceProvider
 import com.example.unicitywallet.token.UnicityTokenRegistry
+import com.example.unicitywallet.utils.HexUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -27,12 +28,15 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import org.unicitylabs.sdk.serializer.UnicityObjectMapper
 import com.example.unicitywallet.utils.JsonMapper
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.withTimeout
 import org.unicitylabs.nostr.nametag.NametagBinding
 import org.unicitylabs.nostr.protocol.EventKinds
 import org.unicitylabs.sdk.address.ProxyAddress
 import org.unicitylabs.sdk.predicate.embedded.UnmaskedPredicate
 import org.unicitylabs.sdk.signing.SigningService
 import org.unicitylabs.sdk.token.TokenState
+import org.unicitylabs.sdk.transaction.TransferTransaction
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -461,7 +465,7 @@ class NostrP2PService(
         val result = ByteArray(32)
         hash.doFinal(result, 0)
 
-        return String(org.apache.commons.codec.binary.Hex.encodeHex(result))
+        return HexUtils.encodeHexString(result)
     }
 
     /**
@@ -469,9 +473,9 @@ class NostrP2PService(
      * Nostr uses Schnorr signatures (BIP-340) for events
      */
     private fun signEvent(eventId: String): String {
-        val messageBytes = org.apache.commons.codec.binary.Hex.decodeHex(eventId.toCharArray())
+        val messageBytes = HexUtils.decodeHex(eventId)
         val signature = keyManager.sign(messageBytes)
-        return String(org.apache.commons.codec.binary.Hex.encodeHex(signature))
+        return HexUtils.encodeHexString(signature)
     }
 
     /**
@@ -632,7 +636,7 @@ class NostrP2PService(
         return try {
             val tagBytes = tag.toByteArray()
             val hash = MessageDigest.getInstance("SHA-256").digest(tagBytes)
-            val pubkey = String(org.apache.commons.codec.binary.Hex.encodeHex(hash))
+            val pubkey = HexUtils.encodeHexString(hash)
             Log.d(TAG, "=== RESOLVE DEBUG: Generated fallback pubkey for $tag: ${pubkey.take(20)}... ===")
             pubkey
         } catch (e: Exception) {
@@ -643,7 +647,7 @@ class NostrP2PService(
 
     private fun createEncryptedMessage(recipientPubkey: String, content: String): Event {
         // Implement NIP-04 encryption with auto-compression (SDK)
-        val recipientPubkeyBytes = org.apache.commons.codec.binary.Hex.decodeHex(recipientPubkey.toCharArray())
+        val recipientPubkeyBytes = HexUtils.decodeHex(recipientPubkey)
         val encryptedContent = keyManager.encryptMessage(content, recipientPubkeyBytes)
 
         return createEvent(
@@ -656,7 +660,7 @@ class NostrP2PService(
     private fun handleEncryptedMessage(event: Event) {
         // Decrypt NIP-04 message with auto-decompression (SDK)
         try {
-            val senderPubkeyBytes = org.apache.commons.codec.binary.Hex.decodeHex(event.pubkey.toCharArray())
+            val senderPubkeyBytes = HexUtils.decodeHex(event.pubkey)
             val decryptedContent = keyManager.decryptMessage(event.content, senderPubkeyBytes)
 
             Log.d(TAG, "Received encrypted message from ${event.pubkey}: $decryptedContent")
@@ -712,12 +716,12 @@ class NostrP2PService(
                 val decryptedContent = try {
                     // Try NIP-04 decryption first (SDK handles auto-decompression)
                     try {
-                        val senderPubkeyBytes = org.apache.commons.codec.binary.Hex.decodeHex(event.pubkey.toCharArray())
+                        val senderPubkeyBytes = HexUtils.decodeHex(event.pubkey)
                         keyManager.decryptMessage(event.content, senderPubkeyBytes)
                     } catch (nip04Error: Exception) {
                         // Fall back to simple hex decoding (legacy format)
                         try {
-                            String(org.apache.commons.codec.binary.Hex.decodeHex(event.content.toCharArray()), Charsets.UTF_8)
+                            String(HexUtils.decodeHex(event.content), Charsets.UTF_8)
                         } catch (hexError: Exception) {
                             throw Exception("Failed both NIP-04 and hex decryption", nip04Error)
                         }
@@ -789,9 +793,9 @@ class NostrP2PService(
                 }
 
                 Log.d(TAG, "Parsing source token...")
-                // Parse source token using UnicityObjectMapper
+                // Parse source token using SDK's fromJson
                 val sourceToken = try {
-                    UnicityObjectMapper.JSON.readValue(sourceTokenJson, org.unicitylabs.sdk.token.Token::class.java)
+                    org.unicitylabs.sdk.token.Token.fromJson(sourceTokenJson)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to parse source token", e)
                     Log.e(TAG, "Token JSON preview: ${sourceTokenJson.take(500)}")
@@ -802,8 +806,7 @@ class NostrP2PService(
                 Log.d(TAG, "Parsing transfer transaction...")
                 // Parse transfer transaction with proper type reference
                 val transferTx = try {
-                    val typeRef = object : com.fasterxml.jackson.core.type.TypeReference<org.unicitylabs.sdk.transaction.Transaction<org.unicitylabs.sdk.transaction.TransferTransactionData>>() {}
-                    UnicityObjectMapper.JSON.readValue(transferTxJson, typeRef)
+                    TransferTransaction.fromJson(transferTxJson)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to parse transfer transaction", e)
                     Log.e(TAG, "Tx JSON preview: ${transferTxJson.take(500)}")
@@ -813,7 +816,7 @@ class NostrP2PService(
 
                 Log.d(TAG, "✅ Parsed successfully!")
                 Log.d(TAG, "Source token type: ${sourceToken.type}")
-                Log.d(TAG, "Transfer recipient: ${transferTx.data.recipient}")
+                Log.d(TAG, "Transfer recipient: ${transferTx.getData().recipient}")
 
                 // Finalize the transfer
                 Log.d(TAG, "Starting finalization...")
@@ -881,11 +884,11 @@ class NostrP2PService(
      */
     private suspend fun finalizeTransfer(
         sourceToken: org.unicitylabs.sdk.token.Token<*>,
-        transferTx: org.unicitylabs.sdk.transaction.Transaction<org.unicitylabs.sdk.transaction.TransferTransactionData>
+        transferTx: TransferTransaction
     ): org.unicitylabs.sdk.token.Token<*>? {
         try {
             // Get recipient address from transfer
-            val recipientAddress = transferTx.data.recipient
+            val recipientAddress = transferTx.getData().recipient
             Log.d(TAG, "Recipient address: ${recipientAddress.address}")
             Log.d(TAG, "Address scheme: ${recipientAddress.scheme}")
 
@@ -937,17 +940,17 @@ class NostrP2PService(
                 return null
             }
 
-            val secret = hexToBytes(identity.privateKey)
+            val secret = HexUtils.decodeHex(identity.privateKey)
             val signingService = SigningService.createFromSecret(secret)
 
             // Create recipient predicate
-            val transferSalt = transferTx.data.salt
+            val transferSalt = transferTx.getData().salt
 
             Log.d(TAG, "Creating recipient predicate:")
             Log.d(TAG, "  Identity pubkey: ${identity.publicKey}")
-            Log.d(TAG, "  Source TokenId: ${bytesToHex(sourceToken.id.bytes).take(16)}...")
+            Log.d(TAG, "  Source TokenId: ${HexUtils.encodeHexString(sourceToken.id.bytes).take(16)}...")
             Log.d(TAG, "  TokenType: ${sourceToken.type}")
-            Log.d(TAG, "  Transfer Salt: ${bytesToHex(transferSalt).take(16)}...")
+            Log.d(TAG, "  Transfer Salt: ${HexUtils.encodeHexString(transferSalt).take(16)}...")
 
             val recipientPredicate = UnmaskedPredicate.create(
                 sourceToken.id,
@@ -957,13 +960,13 @@ class NostrP2PService(
                 transferSalt
             )
 
-            Log.d(TAG, "✅ Predicate created - PublicKey: ${bytesToHex(recipientPredicate.publicKey).take(32)}...")
+            Log.d(TAG, "✅ Predicate created - PublicKey: ${HexUtils.encodeHexString(recipientPredicate.publicKey).take(32)}...")
 
             val recipientState = TokenState(recipientPredicate, null)
 
             Log.d(TAG, "Finalizing transfer with nametag token...")
-            Log.d(TAG, "  Transfer Recipient: ${transferTx.data.recipient.address}")
-            Log.d(TAG, "  My Nametag ProxyAddress: ${org.unicitylabs.sdk.address.ProxyAddress.create(myNametagToken.id).address}")
+            Log.d(TAG, "  Transfer Recipient: ${transferTx.getData().recipient.address}")
+            Log.d(TAG, "  My Nametag ProxyAddress: ${ProxyAddress.create(myNametagToken.id).address}")
 
             // Get StateTransitionClient and trustBase
             val client = ServiceProvider.stateTransitionClient
@@ -977,7 +980,7 @@ class NostrP2PService(
                         sourceToken,
                         recipientState,
                         transferTx,
-                        listOf(myNametagToken)  // Include nametag for proxy resolution
+                        listOf(myNametagToken)
                     )
                 }
             } catch (ve: org.unicitylabs.sdk.verification.VerificationException) {
@@ -1014,7 +1017,7 @@ class NostrP2PService(
      */
     private suspend fun saveFailedTransfer(
         sourceToken: org.unicitylabs.sdk.token.Token<*>,
-        transferTx: org.unicitylabs.sdk.transaction.Transaction<org.unicitylabs.sdk.transaction.TransferTransactionData>,
+        transferTx: TransferTransaction,
         nametag: String,
         verificationError: String
     ) {
@@ -1049,67 +1052,48 @@ class NostrP2PService(
     private suspend fun saveReceivedToken(token: org.unicitylabs.sdk.token.Token<*>) {
         try {
             // Serialize token
-            val tokenJson = UnicityObjectMapper.JSON.writeValueAsString(token)
+            val tokenJson = token.toJson()
 
-            // Extract metadata from token for wallet display
+            // Extract metadata from token for wallet display sing SDK methods directly
             val registry = UnicityTokenRegistry.getInstance(context)
-            var amount: String? = null // BigInteger as String (arbitrary precision)
+            var amount: String? = null
             var coinIdHex: String? = null
             var symbol: String? = null
             var iconUrl: String? = null
 
-            // Parse genesis to extract coin data
-            val tokenJsonObj = JsonMapper.fromJson(tokenJson, Map::class.java) as Map<*, *>
-            Log.d(TAG, "Token JSON keys: ${tokenJsonObj.keys}")
+            val genesis = token.genesis
+            val coinDataOptional =  genesis.data.coinData
 
-            val genesis = tokenJsonObj["genesis"] as? Map<*, *>
-            Log.d(TAG, "Genesis keys: ${genesis?.keys}")
+            Log.d(TAG, "Token has coinData: ${coinDataOptional.isPresent}")
 
-            if (genesis != null) {
-                val genesisData = genesis["data"] as? Map<*, *>
-                Log.d(TAG, "Genesis data keys: ${genesisData?.keys}")
+            if (coinDataOptional.isPresent) {
+                val tokenCoinData = coinDataOptional.get()
+                val coinsMap = tokenCoinData.coins
+                Log.d(TAG, "Coins map from SDK: $coinsMap")
 
-                if (genesisData != null) {
-                    // Coins are directly in genesis.data.coins as an array: [["coinId", "amount"]]
-                    val coinsArray = genesisData["coins"] as? List<*>
-                    Log.d(TAG, "Coins array: $coinsArray")
+                if (coinsMap.isNotEmpty()) {
+                    val firstEntry = coinsMap.entries.first()
+                    val coinId = firstEntry.key
+                    val amountBigInt = firstEntry.value
 
-                    if (coinsArray != null && coinsArray.isNotEmpty()) {
-                        // Each entry is [coinId, amount]
-                        val firstCoin = coinsArray[0] as? List<*>
-                        if (firstCoin != null && firstCoin.size >= 2) {
-                            coinIdHex = firstCoin[0] as? String
-                            // Store amount as String to support BigInteger (arbitrary precision)
-                            amount = when (val amountValue = firstCoin[1]) {
-                                is java.math.BigInteger -> amountValue.toString()
-                                is java.math.BigDecimal -> amountValue.toBigInteger().toString()
-                                is String -> amountValue
-                                is Number -> amountValue.toString()
-                                else -> {
-                                    Log.e(TAG, "Unknown amount type: ${amountValue?.javaClass}")
-                                    null
-                                }
-                            }
+                    coinIdHex = HexUtils.encodeHexString(coinId.bytes)
+                    amount = amountBigInt.toString()
 
-                            Log.d(TAG, "Extracted: coinId=$coinIdHex, amount=$amount")
+                    Log.d(TAG, "Extracted from SDK: coinId=$coinIdHex, amount=$amount")
 
-                            if (coinIdHex != null) {
-                                val coinDef = registry.getCoinDefinition(coinIdHex)
-                                if (coinDef != null) {
-                                    symbol = coinDef.symbol
-                                    iconUrl = coinDef.getIconUrl()
-                                    Log.d(TAG, "Found coin definition: ${coinDef.name} ($symbol)")
-                                } else {
-                                    Log.w(TAG, "Coin definition not found in registry for: $coinIdHex")
-                                }
-                            }
-                        } else {
-                            Log.w(TAG, "Invalid coin entry format: $firstCoin")
-                        }
+                    val coinDef = registry.getCoinDefinition(coinIdHex)
+                    if(coinDef != null) {
+                        symbol = coinDef.symbol
+                        iconUrl = coinDef.getIconUrl()
+                        Log.d(TAG, "Found coin definition: ${coinDef.name} ($symbol)")
                     } else {
-                        Log.w(TAG, "No coins found in genesis data")
+                        Log.w(TAG, "Coin definition not found in registry for: $coinIdHex")
                     }
+                } else {
+                    Log.w(TAG, "Coins map is empty")
                 }
+            } else {
+                Log.w(TAG, "Token has no coinData - cannot extract amount/symbol")
             }
 
             Log.d(TAG, "Final metadata: symbol=$symbol, amount=$amount, coinId=$coinIdHex")
@@ -1150,10 +1134,6 @@ class NostrP2PService(
         return data
     }
 
-    private fun bytesToHex(bytes: ByteArray): String {
-        return bytes.joinToString("") { "%02x".format(it) }
-    }
-
     private fun handleFileMetadata(event: Event) {
         // TODO: Handle file metadata
         Log.d(TAG, "Received file metadata from ${event.pubkey}")
@@ -1188,7 +1168,7 @@ class NostrP2PService(
             val content = "token_transfer:$tokenJson"
 
             // Encrypt the content for the recipient (SDK handles auto-compression)
-            val recipientPubkeyBytes = org.apache.commons.codec.binary.Hex.decodeHex(recipientPubkey.toCharArray())
+            val recipientPubkeyBytes = HexUtils.decodeHex(recipientPubkey)
             val encryptedContent = keyManager.encryptMessage(content, recipientPubkeyBytes)
 
             // Create token transfer event
@@ -1338,7 +1318,7 @@ class NostrP2PService(
             // Subscribe and wait for result
             val subscriptionId = "query-pubkey-${System.currentTimeMillis()}"
             var result: String? = null
-            val receivedEvent = kotlinx.coroutines.CompletableDeferred<Event?>()
+            val receivedEvent = CompletableDeferred<Event?>()
 
             // Add temporary listener for this query
             val listener: (Event) -> Unit = { event ->
@@ -1359,7 +1339,7 @@ class NostrP2PService(
                 }
 
                 // Wait for response with timeout
-                kotlinx.coroutines.withTimeout(5000) {
+                withTimeout(5000) {
                     val event = receivedEvent.await()
                     result = event?.pubkey
                 }

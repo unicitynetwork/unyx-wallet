@@ -25,6 +25,7 @@ import android.widget.FrameLayout
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -60,6 +61,7 @@ import com.journeyapps.barcodescanner.ScanOptions
 import com.example.unicitywallet.data.contact.ContactDatabase
 import com.example.unicitywallet.data.repository.ContactRepository
 import com.example.unicitywallet.utils.ContactsHelper
+import com.example.unicitywallet.utils.HexUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -432,7 +434,9 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
 
             onRecipientConfirmed(recipientContact)
 
-            dialog.dismiss()
+            Handler(Looper.getMainLooper()).postDelayed({
+                dialog.dismiss()
+            }, 50)
         }
 
         btnBack.setOnClickListener {
@@ -560,8 +564,6 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
 
         dialog.show()
     }
-
-    private fun showAssetSendAmountDialog(asset: AggregatedAsset, selectedContact: Contact) {
     private fun showAssetSendAmountDialog(asset: AggregatedAsset, recipient: String) {
         // Get all tokens for this coinId
         Log.d("WalletFragment", "Here is an asset to send ${asset} and coinId ${asset.coinId}")
@@ -652,7 +654,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 Log.d("WalletFragment", "Available tokens: ${tokensForCoin.size}")
 
                 // Convert hex string coinId to bytes (not UTF-8 bytes of the string!)
-                val coinId = org.unicitylabs.sdk.token.fungible.CoinId(hexStringToByteArray(asset.coinId))
+                val coinId = org.unicitylabs.sdk.token.fungible.CoinId(HexUtils.decodeHex(asset.coinId))
                 Log.d("WalletFragment", "CoinId bytes: ${coinId.bytes.joinToString { it.toString() }}")
 
                 // Convert wallet tokens to SDK tokens
@@ -735,7 +737,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                     return@launch
                 }
 
-                val secret = hexStringToByteArray(identity.privateKey)
+                val secret = HexUtils.decodeHex(identity.privateKey)
                 val signingService = SigningService.createFromSecret(secret)
 
                 // Step 5: Execute split if needed
@@ -1003,7 +1005,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                     return@launch
                 }
 
-                val secret = hexStringToByteArray(identity.privateKey)
+                val secret = HexUtils.decodeHex(identity.privateKey)
                 val signingService = SigningService.createFromSecret(secret)
 
                 val salt = ByteArray(32)
@@ -1098,17 +1100,6 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
         } catch (e: Exception) {
             Log.e("MainActivity", "Error dismissing success dialog", e)
         }
-    }
-
-    private fun hexStringToByteArray(hex: String): ByteArray {
-        val len = hex.length
-        val data = ByteArray(len / 2)
-        var i = 0
-        while (i < len) {
-            data[i / 2] = ((Character.digit(hex[i], 16) shl 4) + Character.digit(hex[i + 1], 16)).toByte()
-            i += 2
-        }
-        return data
     }
 
     private fun updateBalanceDisplay() {
@@ -1412,16 +1403,16 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 val recipientContact = Contact(
                     id = recipientNametag,
                     name = recipientNametag,
-                    address = "$recipientNametag@unicity",
+                    unicityId = "$recipientNametag@unicity",
                     avatarUrl = null,
-                    isUnicityUser = true
+                    isFromPhone = false
                 )
 
-                Log.d("MainActivity", "✅ Created contact: name=${recipientContact.name}, address=${recipientContact.address}")
+                Log.d("MainActivity", "✅ Created contact: name=${recipientContact.name}, address=${recipientContact.unicityId}")
                 Log.d("MainActivity", "🚀 Calling sendTokensWithSplitting...")
 
                 // 4. Use existing sendTokensWithSplitting logic
-                sendTokensWithSplitting(tokensForCoin, amount, asset, recipientContact)
+                sendTokensWithSplitting(tokensForCoin, amount, asset, recipientContact.unicityId!!)
 
             } catch (e: Exception) {
                 Log.e("MainActivity", "Error executing Nostr transfer", e)

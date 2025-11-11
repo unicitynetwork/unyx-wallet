@@ -5,7 +5,7 @@ import android.content.Context
 import android.database.Cursor
 import android.provider.ContactsContract
 import android.util.Log
-import com.example.unicitywallet.data.model.Contact // Убедитесь, что это НОВАЯ модель
+import com.example.unicitywallet.data.model.Contact
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

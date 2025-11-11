@@ -19,11 +19,15 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import com.example.unicitywallet.token.UnicityTokenRegistry
+import com.example.unicitywallet.utils.HexUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import org.unicitylabs.sdk.signing.SigningService
+import org.unicitylabs.sdk.token.TokenId
+import org.unicitylabs.sdk.token.TokenType
 
 
 class WalletViewModel(application: Application) : AndroidViewModel(application) {
@@ -469,21 +473,12 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
 
             // Generate a test recipient identity
             val sdkService = getSdkService()
-
-            // Create a test identity for recipient
             val recipientSecretString = "test-recipient-${System.currentTimeMillis()}"
-            val recipientNonceBytes = ByteArray(32).apply {
+            // Create a test identity for recipient
+            val recipientSecret = recipientSecretString.toByteArray()
+            val recipientNonce = ByteArray(32).apply {
                 java.security.SecureRandom().nextBytes(this)
             }
-            val recipientIdentity = mapOf(
-                "secret" to recipientSecretString,
-                "nonce" to recipientNonceBytes.toHexString()
-            )
-            val recipientIdentityJson = com.google.gson.Gson().toJson(recipientIdentity)
-
-            // Get recipient address from identity
-            val recipientSecret = recipientSecretString.toByteArray()
-            val recipientNonce = hexStringToByteArray(recipientNonceBytes.toHexString())
 
             // Parse token data to get tokenId and tokenType
             val objectMapper = com.fasterxml.jackson.databind.ObjectMapper()
@@ -494,9 +489,9 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
             val tokenTypeHex = genesisData?.get("tokenType")?.asText() ?: ""
 
             // Create recipient's predicate to get correct address
-            val recipientSigningService = org.unicitylabs.sdk.signing.SigningService.createFromMaskedSecret(recipientSecret, recipientNonce)
-            val tokenType = org.unicitylabs.sdk.token.TokenType(hexStringToByteArray(tokenTypeHex))
-            val tokenId = org.unicitylabs.sdk.token.TokenId(hexStringToByteArray(tokenIdHex))
+            val recipientSigningService = SigningService.createFromMaskedSecret(recipientSecret, recipientNonce)
+            val tokenType = TokenType(HexUtils.decodeHex(tokenTypeHex))
+            val tokenId = TokenId(HexUtils.decodeHex(tokenIdHex))
 
             // Create salt for UnmaskedPredicate
             val salt = ByteArray(32)
@@ -557,22 +552,6 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun ByteArray.toHexString(): String {
         return joinToString("") { "%02x".format(it) }
-    }
-
-    private fun hexStringToByteArray(hex: String): ByteArray {
-        val len = hex.length
-        val data = ByteArray(len / 2)
-        var i = 0
-        while (i < len) {
-            data[i / 2] = ((Character.digit(hex[i], 16) shl 4) + Character.digit(hex[i + 1], 16)).toByte()
-            i += 2
-        }
-        return data
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        priceUpdateJob?.cancel()
     }
 
     private fun startPriceUpdates() {

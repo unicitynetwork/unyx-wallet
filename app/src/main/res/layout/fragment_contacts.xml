@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingHorizontal="25dp"
+    android:orientation="vertical"
+    android:background="#1D1D1D"
+    tools:context=".ui.settings.contacts.ContactsFragment">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingVertical="20dp">
+
+        <ImageButton
+            android:id="@+id/btnBack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_arrow_back"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_centerVertical="true"
+            app:tint="@android:color/white"
+            android:contentDescription="Return" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:text="Manage contacts"
+            android:textColor="#50FFFFFF"
+            android:textSize="28sp"
+            android:fontFamily="@font/inter_bold"/>
+
+        <ImageButton
+            android:id="@+id/btnAddContact"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_add"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            app:tint="@android:color/white"
+            android:contentDescription="Добавить контакт" />
+    </RelativeLayout>
+
+    <EditText
+        android:id="@+id/etSearchContacts"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Search Contacts"
+        android:textColorHint="#80FFFFFF"
+        android:textColor="@android:color/white"
+        android:background="@drawable/bg_nametag_selector"
+        android:padding="18dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="40dp"
+        android:drawableStart="@drawable/ic_search"
+        android:drawablePadding="8dp"
+        />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvContacts"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        tools:listitem="@layout/item_contact"/>
+
+</LinearLayout>

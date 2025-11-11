@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#1D1D1D"
+    android:paddingHorizontal="25dp"
+    tools:context=".ui.settings.contacts.AddContactFragment">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:paddingVertical="20dp">
+
+        <ImageButton
+            android:id="@+id/btnBack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_arrow_back"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_centerVertical="true"
+            app:tint="@android:color/white"
+            android:contentDescription="Назад" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:text="Add contact"
+            android:textColor="#50FFFFFF"
+            android:textSize="28sp"
+            android:fontFamily="@font/inter_bold"/>
+    </RelativeLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Contact name"
+        android:textColor="#80FFFFFF"
+        android:textSize="14sp"
+        android:layout_marginStart="4dp"/>
+
+    <EditText
+        android:id="@+id/etContactName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter contact name"
+        android:textColorHint="#50FFFFFF"
+        android:textColor="@android:color/white"
+        android:background="@drawable/bg_nametag_selector"
+        android:padding="16dp"
+        android:layout_marginTop="8dp"
+        android:inputType="textPersonName"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Unicity ID"
+        android:textColor="#80FFFFFF"
+        android:textSize="14sp"
+        android:layout_marginStart="4dp"
+        android:layout_marginTop="16dp"/>
+
+    <EditText
+        android:id="@+id/etUnicityId"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter contact's Unicity ID"
+        android:textColorHint="#50FFFFFF"
+        android:textColor="@android:color/white"
+        android:background="@drawable/bg_nametag_selector"
+        android:padding="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="50dp"
+        android:inputType="text"/>
+
+    <Button
+        android:id="@+id/btnAdd"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:text="Add contact"
+        android:textAllCaps="false"
+        android:textColor="@android:color/black"
+        android:background="@drawable/btn_green_rounded"
+        android:textSize="16sp"
+        android:fontFamily="@font/inter_bold"/>
+
+</LinearLayout>

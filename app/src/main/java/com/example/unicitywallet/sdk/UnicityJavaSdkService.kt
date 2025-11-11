@@ -18,7 +18,7 @@ import org.unicitylabs.sdk.token.TokenType
 import org.unicitylabs.sdk.token.fungible.CoinId
 import org.unicitylabs.sdk.token.fungible.TokenCoinData
 import org.unicitylabs.sdk.transaction.MintCommitment
-import org.unicitylabs.sdk.transaction.MintTransactionData
+import org.unicitylabs.sdk.transaction.MintTransaction
 import org.unicitylabs.sdk.transaction.MintTransactionReason
 import org.unicitylabs.sdk.util.InclusionProofUtils
 import java.math.BigInteger
@@ -128,7 +128,7 @@ class UnicityJavaSdkService(
             random.nextBytes(salt)
 
             // Create mint transaction data (SDK 1.1 signature)
-            val mintData = MintTransactionData<MintTransactionReason>(
+            val mintData = MintTransaction.Data<MintTransactionReason>(
                 tokenId,
                 tokenType,
                 tokenDataBytes,
@@ -321,16 +321,5 @@ class UnicityJavaSdkService(
 
     private fun ByteArray.toHexString(): String {
         return joinToString("") { "%02x".format(it) }
-    }
-
-    private fun hexStringToByteArray(hex: String): ByteArray {
-        val len = hex.length
-        val data = ByteArray(len / 2)
-        var i = 0
-        while (i < len) {
-            data[i / 2] = ((Character.digit(hex[i], 16) shl 4) + Character.digit(hex[i + 1], 16)).toByte()
-            i += 2
-        }
-        return data
     }
 }

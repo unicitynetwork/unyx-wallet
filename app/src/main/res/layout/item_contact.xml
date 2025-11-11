@@ -76,11 +76,10 @@
         <!-- Chevron -->
         <ImageView
             android:id="@+id/iconChevron"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
             android:src="@drawable/ic_chevron_right"
             app:tint="#FFFFFF" />
 
     </LinearLayout>
-
 </androidx.cardview.widget.CardView>

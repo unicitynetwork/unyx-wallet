@@ -19,7 +19,7 @@ data class Contact(
 
     // Check if any field contains @unicity
     fun hasUnicityTag(): Boolean {
-        return unicityId.isNullOrBlank()
+        return !unicityId.isNullOrBlank()
     }
 
     // Extract the unicity tag from the contact

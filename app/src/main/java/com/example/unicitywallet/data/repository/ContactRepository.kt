@@ -46,7 +46,7 @@ class ContactRepository(
                     Contact(
                         id = phoneContact.id,
                         name = phoneContact.name,
-                        unicityId = null, // No unicity id by default
+                        unicityId = phoneContact.unicityId,
                         isFromPhone = true
                     )
                 )
@@ -69,13 +69,30 @@ class ContactRepository(
         return mergedList.sortedBy { it.name }
     }
 
-    // Edit contact
-    suspend fun saveContactEdit(contactId: String, newName: String, newUnicityId: String) {
+    suspend fun getContactById(contactId: String) : Contact? {
+        val dbContact = contactDao.getById(contactId)
+        if (dbContact != null) {
+            return Contact(
+                id = dbContact.id,
+                name = dbContact.name,
+                unicityId = dbContact.unicityId,
+                isFromPhone = !dbContact.isAppCreated
+            )
+        }
+        val phoneContacts = contactsHelper.loadPhoneContacts().associateBy { it.id }
+        return phoneContacts[contactId]
+    }
+
+    // Update contact
+    suspend fun updateContact(contactId: String, newName: String, newUnicityId: String) {
+        val existingEntity = contactDao.getById(contactId)
+        val isAppCreated = existingEntity?.isAppCreated ?: false
+
         val entity = ContactEntity(
             id = contactId,
             name = newName,
             unicityId = newUnicityId,
-            isAppCreated = false
+            isAppCreated = isAppCreated
         )
         contactDao.insertOrUpdate(entity) // Room's @Insert(onConflict = OnConflictStrategy.REPLACE)
     }

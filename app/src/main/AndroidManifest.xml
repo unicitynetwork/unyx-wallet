@@ -95,6 +95,13 @@
             android:theme="@style/Theme.UnicityWallet"
             android:configChanges="orientation|screenSize|keyboardHidden"
             />
+        <activity
+            android:name=".ui.settings.ContactsActivity"
+            android:exported="false"
+            android:label="Manage Contacts"
+            android:theme="@style/Theme.UnicityWallet"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            />
     </application>
 
 </manifest>

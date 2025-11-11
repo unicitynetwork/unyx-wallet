@@ -18,7 +18,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.unicitywallet.data.model.Contact
 import com.example.unicitywallet.data.repository.ContactRepository
 import com.example.unicitywallet.databinding.DialogContactListBinding
-import com.example.unicitywallet.utils.ContactsHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -133,11 +132,11 @@ class ContactListDialog(
         }
     }
 
-    fun onPermissionResult(requestCode: Int, granted: Boolean) {
-        if (requestCode == REQUEST_CODE_CONTACTS && granted) {
-            loadMergedContacts()
-        }
-    }
+//    fun onPermissionResult(requestCode: Int, granted: Boolean) {
+//        if (requestCode == REQUEST_CODE_CONTACTS && granted) {
+//            loadMergedContacts()
+//        }
+//    }
 
     private fun filterContacts(query: String) {
         val filtered = allContacts.filter { contact ->

@@ -25,5 +25,9 @@ class SettingsActivity : AppCompatActivity() {
         binding.rowPin.setOnClickListener {
             //TODO
         }
+
+        binding.rowManageContacts.setOnClickListener {
+            startActivity(Intent(this, ContactsActivity::class.java))
+        }
     }
 }

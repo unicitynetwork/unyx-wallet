@@ -14,7 +14,7 @@ android {
         applicationId = "com.example.unicitywallet"
         minSdk = 31
         //noinspection OldTargetApi
-        targetSdk = 34
+        targetSdk = 31
         versionCode = 1
         versionName = "1.0"
 
@@ -61,7 +61,7 @@ dependencies {
     implementation(project(":unicity-nostr-sdk"))
 
     // Unicity Java SDK: https://jitpack.io/#org.unicitylabs/java-state-transition-sdk
-    implementation("org.unicitylabs:java-state-transition-sdk:1.2.0")
+    implementation("org.unicitylabs:java-state-transition-sdk:1.4.1")
 
     // Required dependencies for Unicity SDK (also used app-wide for JSON serialization)
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.17.0")
