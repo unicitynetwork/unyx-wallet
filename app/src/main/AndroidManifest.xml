@@ -73,6 +73,28 @@
             android:theme="@style/Theme.UnicityWallet"
             android:configChanges="orientation|screenSize|keyboardHidden"
             />
+        <activity
+            android:name=".ui.scanner.PortraitCaptureActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:stateNotNeeded="true"
+            android:theme="@style/zxing_CaptureTheme"
+            android:windowSoftInputMode="stateAlwaysHidden"
+            />
+        <activity
+            android:name=".ui.settings.SettingsActivity"
+            android:exported="false"
+            android:label="Settings"
+            android:theme="@style/Theme.UnicityWallet"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            />
+        <activity
+            android:name=".ui.settings.RecoveryPhraseActivity"
+            android:exported="false"
+            android:label="Recovery Phrase"
+            android:theme="@style/Theme.UnicityWallet"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            />
     </application>
 
 </manifest>

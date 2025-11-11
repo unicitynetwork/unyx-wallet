@@ -186,7 +186,9 @@ class ContactListDialog(
     private fun getMockContacts(): List<Contact> {
         return listOf(
             Contact("1", "Igor", "igor9", isUnicityUser = true),
-            Contact("2", "Michael", "michael7", isUnicityUser = true)
+            Contact("2", "Michael", "michael7", isUnicityUser = true),
+            Contact("3", "Tony", "tony1", isUnicityUser = true),
+            Contact("4", "Artur", "artur8", isUnicityUser = true),
         )
     }
 
