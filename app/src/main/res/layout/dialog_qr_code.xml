@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingVertical="48dp"
+    android:gravity="center"
+    android:background="@drawable/bg_popup_rounded">
+
+    <!-- QR Code Container -->
+    <FrameLayout
+        android:layout_width="280dp"
+        android:layout_height="280dp"
+        android:layout_marginBottom="16dp">
+
+        <!-- QR Code Image -->
+        <ImageView
+            android:id="@+id/qrCodeImage"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:background="@drawable/bg_qrcode_rounded"
+            android:padding="16dp" />
+
+        <!-- Unicity Logo Overlay -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_gravity="center"
+            app:cardCornerRadius="30dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@android:color/white">
+
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
+                android:src="@drawable/unicity_logo"
+                android:scaleType="fitCenter" />
+
+        </androidx.cardview.widget.CardView>
+
+    </FrameLayout>
+
+    <!-- Info Text -->
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Share this QR code to receive assets"
+        android:textSize="14sp"
+        android:textColor="#666666"
+        android:gravity="center" />
+
+    <!-- Timer Text -->
+    <TextView
+        android:id="@+id/timerText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Expires in 60s"
+        android:textSize="12sp"
+        android:textColor="#FF5252"
+        android:gravity="center"
+        android:layout_marginTop="8dp" />
+
+    <!-- Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="16dp">
+
+        <Button
+            android:id="@+id/btnShare"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:text="Share"
+            android:layout_marginEnd="8dp"
+            app:cornerRadius="12dp"
+            android:textColor="#FFFFFF"
+            android:textAllCaps="false"
+            android:background="@drawable/btn_white_border"
+            android:textSize="18sp"
+            android:fontFamily="@font/inter_semibold" />
+
+        <Button
+            android:id="@+id/btnClose"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:text="Close"
+            android:textColor="#262626"
+            android:textAllCaps="false"
+            android:background="@drawable/btn_green_rounded"
+            android:layout_marginStart="8dp"
+            android:textSize="18sp"
+            android:fontFamily="@font/inter_semibold"/>
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,24 +1,30 @@
 package com.example.unicitywallet.ui.onboarding.restoreWallet
 
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
 import com.example.unicitywallet.R
+import com.example.unicitywallet.data.model.Wallet
 import com.example.unicitywallet.databinding.ActivityImportWalletBinding
 import com.example.unicitywallet.identity.IdentityManager
 import com.example.unicitywallet.ui.onboarding.welcome.WelcomeActivity
 import com.example.unicitywallet.ui.wallet.WalletActivity
+import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.util.Locale
+import java.util.UUID
 
 class RestoreWalletActivity : AppCompatActivity() {
 
     private lateinit var identityManager: IdentityManager
     private lateinit var binding: ActivityImportWalletBinding
+    private lateinit var sharedPreferences: SharedPreferences
 
     private val fields by lazy {
         listOf<EditText>(
@@ -37,6 +43,7 @@ class RestoreWalletActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         identityManager = IdentityManager(applicationContext)
+        sharedPreferences = getSharedPreferences("wallet_prefs",MODE_PRIVATE)
 
         binding.word12.imeOptions = EditorInfo.IME_ACTION_DONE
 
@@ -63,6 +70,15 @@ class RestoreWalletActivity : AppCompatActivity() {
     private suspend fun importWallet(words: List<String>){
         val identity = identityManager.restoreFromSeedPhrase(words)
         if(identity != null){
+            val wallet = Wallet(
+                id = UUID.randomUUID().toString(),
+                name = "My Wallet",
+                address = identity.address,
+                tokens = emptyList()
+            )
+
+            val walletJson = Gson().toJson(wallet)
+            sharedPreferences.edit { putString("wallet", walletJson) }
             startActivity(Intent(this, WalletActivity::class.java))
             finish()
         } else {

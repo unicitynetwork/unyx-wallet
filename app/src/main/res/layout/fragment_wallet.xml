@@ -248,7 +248,7 @@
                             android:gravity="center">
 
                             <TextView
-                                android:text="Tokens"
+                                android:text="Assets"
                                 android:textSize="14sp"
                                 android:textColor="#262626"
                                 android:fontFamily="@font/inter_semibold"
@@ -264,7 +264,7 @@
                             android:gravity="center">
 
                             <TextView
-                                android:text="Collectibles"
+                                android:text="Tokens"
                                 android:textSize="14sp"
                                 android:textColor="#50FFFFFF"
                                 android:fontFamily="@font/inter_semibold"

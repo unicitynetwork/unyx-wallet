@@ -10,6 +10,7 @@ import kotlin.getValue
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.unicitywallet.viewmodel.WalletViewModel
+import androidx.recyclerview.widget.RecyclerView
 
 class HistoryFragment : Fragment(R.layout.fragment_transaction_history) {
     private lateinit var binding: FragmentTransactionHistoryBinding
@@ -31,7 +32,7 @@ class HistoryFragment : Fragment(R.layout.fragment_transaction_history) {
             .getSharedPreferences("UnicityWalletPrefs", Context.MODE_PRIVATE)
         currentNametagString = prefs.getString("unicity_tag", null)
 
-        binding.tvNametag.text = currentNametagString
+        binding.tvNametag.text = "$currentNametagString@unicity"
 
         val transactionEvents = viewModel.transactionHistory.value
 
@@ -45,5 +46,18 @@ class HistoryFragment : Fragment(R.layout.fragment_transaction_history) {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = tokenHistoryAdapter
         }
+
+        tokenHistoryAdapter = TokenHistoryAdapter(transactionEvents, viewModel.aggregatedAssets.value)
+        binding.rvAssets.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = tokenHistoryAdapter
+        }
+
+        binding.rvAssets.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                binding.swipeRefreshLayout.isEnabled = !recyclerView.canScrollVertically(-1)
+            }
+        })
     }
 }

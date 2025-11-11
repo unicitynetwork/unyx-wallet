@@ -6,7 +6,11 @@ import android.content.Context
 import android.content.Context.VIBRATOR_SERVICE
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -34,19 +38,30 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.unicitywallet.data.model.AggregatedAsset
 import com.example.unicitywallet.data.model.Contact
+import com.example.unicitywallet.data.model.PaymentRequest
 import com.example.unicitywallet.data.model.Token
 import com.example.unicitywallet.databinding.FragmentWalletBinding
 import com.example.unicitywallet.identity.IdentityManager
 import com.example.unicitywallet.nostr.NostrP2PService
 import com.example.unicitywallet.services.ServiceProvider
+import com.example.unicitywallet.token.UnicityTokenRegistry
 import com.example.unicitywallet.transfer.TokenSplitCalculator
 import com.example.unicitywallet.transfer.TokenSplitExecutor
 import com.example.unicitywallet.transfer.toHexString
 import com.example.unicitywallet.viewmodel.WalletViewModel
+import com.example.unicitywallet.ui.scanner.PortraitCaptureActivity
+import com.example.unicitywallet.ui.settings.SettingsActivity
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
+import com.google.zxing.qrcode.QRCodeWriter
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import com.example.unicitywallet.data.contact.ContactDatabase
 import com.example.unicitywallet.data.repository.ContactRepository
 import com.example.unicitywallet.utils.ContactsHelper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.unicitylabs.sdk.address.ProxyAddress
@@ -142,7 +157,16 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
             .getSharedPreferences("UnicityWalletPrefs", Context.MODE_PRIVATE)
         currentNametagString = prefs.getString("unicity_tag", null)
 
-        binding.tvNametag.text = currentNametagString
+        binding.tvNametag.text = "$currentNametagString@unicity"
+        binding.btnReceive.setOnClickListener {
+            showReceiveOpenQRCode()
+        }
+        binding.btnQRScanner.setOnClickListener {
+            scanQRCode()
+        }
+        binding.btnSettings.setOnClickListener {
+            startActivity(Intent(requireContext(), SettingsActivity::class.java))
+        }
         binding.btnSend.setOnClickListener {
             if(selectedIndex == 0) {
                 val assets = viewModel.aggregatedAssets.value
@@ -475,6 +499,69 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
         dialog.show()
     }
 
+    /**
+     * Show amount input dialog for Nostr transfer
+     */
+    private fun showNostrTransferAmountDialog(
+        recipientNametag: String,
+        recipientPubkey: String,
+        asset: AggregatedAsset
+    ) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_amount_input, null)
+        val etAmount = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etAmount)
+        val tvBalance = dialogView.findViewById<TextView>(R.id.tvBalance)
+
+        // Show available balance
+        val formattedBalance = asset.getFormattedAmount()
+        tvBalance.text = "Available: $formattedBalance ${asset.symbol}"
+
+        val balanceDecimal = asset.getAmountAsDecimal()
+
+
+        val dialog = AlertDialog.Builder(requireContext())
+            .setTitle("Send ${asset.symbol}")
+            .setView(dialogView)
+            .setPositiveButton("Send") { _, _ ->
+                val amountText = etAmount.text?.toString()
+
+                if (amountText.isNullOrEmpty()) {
+                    Toast.makeText(requireContext(), "Please enter an amount", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+
+                try {
+                    // Use BigDecimal to avoid overflow with high-decimal tokens
+                    val amountDecimal = java.math.BigDecimal(amountText)
+                    val multiplier = java.math.BigDecimal.TEN.pow(asset.decimals)
+                    val amountInSmallestUnitBD = amountDecimal.multiply(multiplier)
+                    val amountInSmallestUnit = amountInSmallestUnitBD.toBigInteger()
+
+                    if (amountInSmallestUnit <= java.math.BigInteger.ZERO) {
+                        Toast.makeText(requireContext(), "Please enter a valid amount", Toast.LENGTH_SHORT).show()
+                        return@setPositiveButton
+                    }
+
+                    val totalBalanceBigInt = asset.getAmountAsBigInteger()
+                    if (amountInSmallestUnit > totalBalanceBigInt) {
+                        Toast.makeText(requireContext(), "Insufficient balance", Toast.LENGTH_SHORT).show()
+                        return@setPositiveButton
+                    }
+
+                    // Execute transfer
+                    executeNostrTokenTransfer(recipientNametag, recipientPubkey, asset.coinId, amountInSmallestUnit)
+
+                } catch (e: NumberFormatException) {
+                    Toast.makeText(requireContext(), "Invalid amount", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .setCancelable(false)
+            .create()
+
+        dialog.show()
+    }
+
+    private fun showAssetSendAmountDialog(asset: AggregatedAsset, selectedContact: Contact) {
     private fun showAssetSendAmountDialog(asset: AggregatedAsset, recipient: String) {
         // Get all tokens for this coinId
         Log.d("WalletFragment", "Here is an asset to send ${asset} and coinId ${asset.coinId}")
@@ -1115,6 +1202,370 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
             }
         } catch (e: Exception) {
             Log.e("WalletFragment", "Failed to start Nostr service", e)
+        }
+    }
+    private fun handleMintRequest(data: Uri) {
+        val tokenName = data.getQueryParameter("token")
+        val amount = data.getQueryParameter("amount")?.toLongOrNull()
+        val tokenData = data.getQueryParameter("tokenData") // Uri.getQueryParameter automatically decodes URL encoding
+
+        if (tokenName != null && amount != null) {
+            // Build the token data string
+            val finalTokenData = if (!tokenData.isNullOrEmpty()) {
+                // Use the provided token data (already decoded by getQueryParameter)
+                tokenData
+            } else {
+                // Default format if no tokenData provided
+                "BoxyRun Score: $amount coins | Date: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm").format(java.util.Date())}"
+            }
+
+            // Show confirmation dialog
+            AlertDialog.Builder(requireContext())
+                .setTitle("🎮 ${tokenName} Achievement!")
+                .setMessage("Congratulations! You collected $amount coins!\n\nGame Data: $finalTokenData\n\nWould you like to mint a Unicity NFT token to save this achievement on the blockchain?")
+                .setPositiveButton("Mint Token") { _, _ ->
+                    // Mint the token with the provided or default game data
+                    viewModel.mintNewToken(tokenName, finalTokenData, amount)
+
+                    // Show minting progress
+                    Toast.makeText(requireContext(), "🎮 Minting your ${tokenName} achievement token...", Toast.LENGTH_LONG).show()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        } else {
+            Toast.makeText(requireContext(), "Invalid mint request", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun generateQRCode(content: String): Bitmap {
+        val writer = QRCodeWriter()
+        val hints = hashMapOf<EncodeHintType, Any>()
+        hints[EncodeHintType.ERROR_CORRECTION] = ErrorCorrectionLevel.H
+        hints[EncodeHintType.MARGIN] = 1
+
+        val bitMatrix = writer.encode(content, BarcodeFormat.QR_CODE, 512, 512, hints)
+        val width = bitMatrix.width
+        val height = bitMatrix.height
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
+
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                bitmap.setPixel(x, y, if (bitMatrix[x, y]) Color.BLACK else Color.WHITE)
+            }
+        }
+
+        return bitmap
+    }
+    private fun handleScannedQRCode(content: String) {
+        Log.d("MainActivity", "Scanned QR: ${content.take(100)}...")
+
+        if (content.startsWith("unicity://pay")) {
+            val paymentRequest = PaymentRequest.fromUri(content)
+            if (paymentRequest != null) {
+                handlePaymentRequest(paymentRequest)
+                return
+            }
+        }
+
+        if (content.startsWith("nfcwallet://mint-request")) {
+            handleMintRequest(Uri.parse(content))
+            return
+        }
+
+        Toast.makeText(requireContext(), "Not a valid QR code", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun showPaymentRequestConfirmationDialog(
+        paymentRequest: PaymentRequest,
+        recipientPubkey: String
+    ) {
+        val registry = UnicityTokenRegistry.getInstance(requireContext())
+
+        // For specific requests, check balance BEFORE showing confirmation
+        if (paymentRequest.isSpecific()) {
+            val asset = viewModel.aggregatedAssets.value.find { it.coinId == paymentRequest.coinId }
+            if (asset != null) {
+                val availableBalance = asset.getAmountAsBigInteger()
+                val requestedAmount = paymentRequest.amount!!
+
+                if (availableBalance < requestedAmount) {
+                    val assetDef = registry.getCoinById(paymentRequest.coinId!!)
+                    val decimals = assetDef?.decimals ?: 0
+                    val divisor = java.math.BigDecimal.TEN.pow(decimals)
+                    val availableDecimal = java.math.BigDecimal(availableBalance).divide(divisor).stripTrailingZeros().toPlainString()
+                    val requestedDecimal = java.math.BigDecimal(requestedAmount).divide(divisor).stripTrailingZeros().toPlainString()
+
+                    AlertDialog.Builder(requireContext())
+                        .setTitle("Insufficient Balance")
+                        .setMessage("Cannot send $requestedDecimal ${assetDef?.symbol ?: "tokens"} to ${paymentRequest.nametag}@unicity\n\nYour balance: $availableDecimal ${assetDef?.symbol ?: "tokens"}")
+                        .setPositiveButton("OK", null)
+                        .show()
+                    return
+                }
+            }
+        }
+
+        val message = if (paymentRequest.isSpecific()) {
+            val asset = registry.getCoinById(paymentRequest.coinId!!)
+            val decimals = asset?.decimals ?: 0
+            val divisor = java.math.BigDecimal.TEN.pow(decimals)
+            val displayAmount = java.math.BigDecimal(paymentRequest.amount).divide(divisor).stripTrailingZeros().toPlainString()
+            "Send $displayAmount ${asset?.symbol ?: "tokens"}\nto ${paymentRequest.nametag}@unicity?"
+        } else {
+            "Send tokens to ${paymentRequest.nametag}@unicity?\n\nYou will choose the amount in the next step."
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Confirm Token Transfer")
+            .setMessage(message)
+            .setPositiveButton("Continue") { _, _ ->
+                if (paymentRequest.isSpecific()) {
+                    // Execute specific transfer
+                    executeNostrTokenTransfer(
+                        recipientNametag = paymentRequest.nametag,
+                        recipientPubkey = recipientPubkey,
+                        coinId = paymentRequest.coinId!!,
+                        amount = paymentRequest.amount!!
+                    )
+                } else {
+                    // Show asset/amount selector
+                    showNostrTransferAssetSelector(paymentRequest.nametag, recipientPubkey)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showNostrTransferAssetSelector(recipientNametag: String, recipientPubkey: String) {
+        // Step 1: Show asset selection dialog
+        val dialogView = layoutInflater.inflate(R.layout.dialog_select_asset, null)
+        val rvAssets = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvAssets)
+        val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+
+        // Get assets from aggregated view (only those with balance)
+        val availableAssets = viewModel.aggregatedAssets.value.filter { asset ->
+            asset.getAmountAsBigInteger().compareTo(java.math.BigInteger.ZERO) > 0
+        }
+
+        if (availableAssets.isEmpty()) {
+            Toast.makeText(requireContext(), "No assets available to send", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val assetDialog = AlertDialog.Builder(requireContext())
+            .setView(dialogView)
+            .setCancelable(false)
+            .create()
+
+        // Setup RecyclerView with AssetSelectorAdapter
+        rvAssets.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(requireContext())
+        val adapter = AssetSelectorAdapter(availableAssets) { selectedAsset ->
+            assetDialog.dismiss()
+            // Step 2: Show amount dialog for selected asset
+            showNostrTransferAmountDialog(recipientNametag, recipientPubkey, selectedAsset)
+        }
+        rvAssets.adapter = adapter
+
+        btnCancel.setOnClickListener {
+            assetDialog.dismiss()
+        }
+
+        assetDialog.show()
+    }
+
+    private fun executeNostrTokenTransfer(
+        recipientNametag: String,
+        recipientPubkey: String,
+        coinId: String,
+        amount: java.math.BigInteger
+    ) {
+        lifecycleScope.launch {
+            try {
+                Log.d("MainActivity", "━━━ executeNostrTokenTransfer START ━━━")
+                Log.d("MainActivity", "  Recipient nametag: $recipientNametag")
+                Log.d("MainActivity", "  Recipient pubkey: ${recipientPubkey.take(16)}...")
+                Log.d("MainActivity", "  CoinId: $coinId")
+                Log.d("MainActivity", "  Amount: $amount")
+
+                // 1. Get all tokens with matching coinId
+                val tokensForCoin = viewModel.getTokensByCoinId(coinId)
+
+                if (tokensForCoin.isEmpty()) {
+                    Toast.makeText(requireContext(), "No tokens found with coinId $coinId", Toast.LENGTH_LONG).show()
+                    Log.e("MainActivity", "❌ No tokens found for coinId: $coinId")
+                    return@launch
+                }
+
+                Log.d("MainActivity", "✅ Found ${tokensForCoin.size} token(s) for coinId")
+
+                // 2. Get the asset metadata
+                val asset = viewModel.aggregatedAssets.value.find { it.coinId == coinId }
+                if (asset == null) {
+                    Toast.makeText(requireContext(), "Asset not found in wallet", Toast.LENGTH_LONG).show()
+                    Log.e("MainActivity", "❌ Asset not found for coinId: $coinId")
+                    return@launch
+                }
+
+                Log.d("MainActivity", "✅ Asset found: ${asset.symbol}")
+
+                // 3. Create a Contact object from nametag for compatibility
+                val recipientContact = Contact(
+                    id = recipientNametag,
+                    name = recipientNametag,
+                    address = "$recipientNametag@unicity",
+                    avatarUrl = null,
+                    isUnicityUser = true
+                )
+
+                Log.d("MainActivity", "✅ Created contact: name=${recipientContact.name}, address=${recipientContact.address}")
+                Log.d("MainActivity", "🚀 Calling sendTokensWithSplitting...")
+
+                // 4. Use existing sendTokensWithSplitting logic
+                sendTokensWithSplitting(tokensForCoin, amount, asset, recipientContact)
+
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error executing Nostr transfer", e)
+                Toast.makeText(requireContext(), "Transfer failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+    private fun handlePaymentRequest(paymentRequest: PaymentRequest) {
+        Log.d("MainActivity", "Handling payment request for nametag: ${paymentRequest.nametag}")
+
+        lifecycleScope.launch {
+            try {
+                // Show loading
+                val loadingDialog = AlertDialog.Builder(requireContext())
+                    .setTitle("Looking up ${paymentRequest.nametag}@unicity...")
+                    .setMessage("Querying Nostr relay...")
+                    .setCancelable(false)
+                    .create()
+                loadingDialog.show()
+
+                // Get Nostr service
+                val nostrService = NostrP2PService.getInstance(requireContext().applicationContext)
+                if (nostrService == null) {
+                    loadingDialog.dismiss()
+                    Toast.makeText(requireContext(), "Nostr service not available", Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+
+                // Ensure service is started
+                if (!nostrService.isRunning()) {
+                    nostrService.start()
+                    delay(2000)
+                }
+
+                // Query nametag → Nostr pubkey
+                val recipientPubkey = nostrService.queryPubkeyByNametag(paymentRequest.nametag)
+                loadingDialog.dismiss()
+
+                if (recipientPubkey == null) {
+                    AlertDialog.Builder(requireContext())
+                        .setTitle("Nametag Not Found")
+                        .setMessage("Could not find ${paymentRequest.nametag}@unicity on Nostr relay.\n\nMake sure the recipient has minted their nametag and it's published to the relay.")
+                        .setPositiveButton("OK", null)
+                        .show()
+                    return@launch
+                }
+
+                Log.d("MainActivity", "Found recipient pubkey: ${recipientPubkey.take(16)}...")
+
+                // Show send confirmation dialog
+                showPaymentRequestConfirmationDialog(paymentRequest, recipientPubkey)
+
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error handling payment request", e)
+                Toast.makeText(requireContext(), "Error: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+    private val barcodeLauncher = registerForActivityResult(ScanContract()) { result ->
+        if (result.contents != null) {
+            handleScannedQRCode(result.contents)
+        }
+    }
+
+    private fun scanQRCode() {
+        val options = ScanOptions()
+            .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+            .setPrompt("Scan payment request QR code")
+            .setCameraId(0)
+            .setBeepEnabled(true)
+            .setOrientationLocked(true)
+            .setCaptureActivity(PortraitCaptureActivity::class.java) // Force portrait mode
+
+        barcodeLauncher.launch(options)
+    }
+
+    private fun showReceiveOpenQRCode() {
+        val nametag = currentNametagString
+        if (nametag == null) {
+            Toast.makeText(requireContext(), "Please set up your nametag in Profile first", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val paymentRequest = PaymentRequest(nametag = nametag)
+        showReceiveQRCodeDialog(paymentRequest)
+    }
+
+    private fun showReceiveQRCodeDialog(paymentRequest: PaymentRequest) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_qr_code, null)
+
+        val qrCodeImage = dialogView.findViewById<ImageView>(R.id.qrCodeImage)
+        val statusText = dialogView.findViewById<TextView>(R.id.statusText)
+        val timerText = dialogView.findViewById<TextView>(R.id.timerText)
+        val btnShare = dialogView.findViewById<Button>(R.id.btnShare)
+        val btnClose = dialogView.findViewById<Button>(R.id.btnClose)
+
+        val dialog = AlertDialog.Builder(requireContext())
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        try {
+            // Use URI format so camera apps can recognize it as a deep link
+            val qrContent = paymentRequest.toUri()
+            val qrBitmap = generateQRCode(qrContent)
+            qrCodeImage.setImageBitmap(qrBitmap)
+
+            // Update status text
+            val registry = UnicityTokenRegistry.getInstance(requireContext())
+            val statusMessage = if (paymentRequest.isSpecific()) {
+                val asset = registry.getCoinById(paymentRequest.coinId!!)
+                val decimals = asset?.decimals ?: 0
+                val divisor = java.math.BigDecimal.TEN.pow(decimals)
+                val displayAmount = java.math.BigDecimal(paymentRequest.amount).divide(divisor).stripTrailingZeros().toPlainString()
+                "Scan to send $displayAmount ${asset?.symbol ?: "tokens"}"
+            } else {
+                "Scan to send tokens to ${paymentRequest.nametag}@unicity"
+            }
+            statusText.text = statusMessage
+
+            // Hide timer for now (we can add expiry later if needed)
+            timerText.visibility = View.GONE
+
+            // Share button
+            btnShare.setOnClickListener {
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, qrContent)
+                    putExtra(Intent.EXTRA_SUBJECT, "Unicity Payment Request")
+                }
+                startActivity(Intent.createChooser(shareIntent, "Share Payment Request"))
+            }
+
+            btnClose.setOnClickListener {
+                dialog.dismiss()
+            }
+
+            dialog.show()
+
+        } catch (e: Exception) {
+            Log.e("Wallet Fragment", "Error generating QR code", e)
+            Toast.makeText(requireContext(), "Error generating QR code: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 }

@@ -182,7 +182,20 @@ class UnicityTokenRegistry private constructor(private val context: Context) {
      * Get coin definition by its hex ID
      */
     fun getCoinDefinition(coinIdHex: String): TokenDefinition? {
-        return definitionsById[coinIdHex]
+        var definition = definitionsById[coinIdHex]
+        if (definition != null) {
+            return definition
+        }
+
+        Log.d(TAG, "Coin ID $coinIdHex not found in cache, refreshing from online registry...")
+        fetchAndCacheRegistry()
+
+        definition = definitionsById[coinIdHex]
+        if (definition != null) {
+            Log.d(TAG, "Found coin after refresh: ${definition.symbol}")
+        }
+
+        return definition
     }
 
     /**
@@ -204,5 +217,19 @@ class UnicityTokenRegistry private constructor(private val context: Context) {
      */
     fun getAllDefinitions(): List<TokenDefinition> {
         return tokenDefinitions
+    }
+
+    /**
+     * Alias for getAllDefinitions() - returns all assets (tokens and coins)
+     */
+    fun getAllAssets(): List<TokenDefinition> {
+        return getAllDefinitions()
+    }
+
+    /**
+     * Alias for getCoinDefinition() - get coin by ID
+     */
+    fun getCoinById(coinIdHex: String): TokenDefinition? {
+        return getCoinDefinition(coinIdHex)
     }
 }
