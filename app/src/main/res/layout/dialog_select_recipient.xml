@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -10,7 +11,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Select amount"
+        android:text="Select recipient"
         android:textColor="#80FFFFFF"
         android:textSize="40sp"
         android:fontFamily="@font/inter_bold" />
@@ -23,50 +24,61 @@
         android:textColor="@android:color/white"
         android:textSize="48sp"
         android:layout_marginBottom="60dp"
-        android:fontFamily="@font/inter_bold"/>
+        android:fontFamily="@font/inter_bold" />
 
-    <TextView
-        android:id="@+id/tvBalance"
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Balance: 0.00 BTC"
-        android:textColor="#50FFFFFF"
-        android:textSize="14sp"
-        android:layout_marginBottom="4dp"
-        android:layout_marginStart="8dp"
-        android:fontFamily="@font/inter_medium"/>
+        android:background="@drawable/bg_nametag_selector">
 
-    <EditText
-        android:id="@+id/etAmount"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/bg_nametag_selector"
-        android:hint="Amount to send"
-        android:textColorHint="#50FFFFFF"
-        android:textSize="16sp"
-        android:textColor="@android:color/white"
-        android:inputType="numberDecimal"
-        android:padding="16dp"
-        android:maxLines="1" />
+        <ImageButton
+            android:id="@+id/btnOpenContacts"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:paddingStart="12dp"
+            android:paddingEnd="16dp"
+            android:src="@drawable/ic_contact_search"
+            android:contentDescription="Open contacts"
+            app:tint="#FFFFFF" />
+
+        <EditText
+            android:id="@+id/etNametag"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_toStartOf="@id/btnOpenContacts"
+            android:layout_centerVertical="true"
+            android:background="@null"
+            android:hint="Recipient unicity id"
+            android:textColorHint="#50FFFFFF"
+            android:textSize="16sp"
+            android:textColor="@android:color/white"
+            android:inputType="numberDecimal"
+            android:padding="16dp"
+            android:maxLines="1" />
+
+    </RelativeLayout>
     <Button
-        android:id="@+id/btnSend"
+        android:id="@+id/btnContinue"
         android:layout_marginTop="35dp"
         android:layout_width="280dp"
         android:layout_height="50dp"
         android:background="@drawable/btn_green_rounded"
-        android:text="Send"
+        android:text="Continue"
         android:textAllCaps="false"
         android:textColor="@android:color/black"
         android:textSize="16sp"
         android:textStyle="bold" />
 
     <Button
-        android:id="@+id/btnCancel"
+        android:id="@+id/btnBack"
         android:layout_width="280dp"
         android:layout_height="wrap_content"
         android:background="@drawable/btn_white_border"
         android:backgroundTint="#50FFFFFF"
-        android:text="Cancel"
+        android:text="Back"
         android:textAllCaps="false"
         android:textColor="#50FFFFFF"
         android:textSize="16sp"
