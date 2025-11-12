@@ -293,8 +293,8 @@ class UnicityJavaSdkService(
             return null
         }
         return try {
-            // Use UnicityObjectMapper for proper serialization
-            UnicityObjectMapper.JSON.writeValueAsString(token)
+            // Use SDK's toJson() method
+            token.toJson()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to serialize token", e)
             null

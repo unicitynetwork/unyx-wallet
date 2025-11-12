@@ -8,6 +8,8 @@ import android.util.Log
 import com.example.unicitywallet.data.model.Contact
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.unicitylabs.sdk.api.RequestId
+import org.unicitylabs.sdk.token.TokenId
 
 class ContactsHelper(private val context: Context) {
 
@@ -69,6 +71,7 @@ class ContactsHelper(private val context: Context) {
             contactsMap.values.forEach { contactInfo ->
 
                 val phone = contactInfo.phoneNumber
+                Log.d("WALLET HELPER", "$phone")
                 var contactUnicityId: String? = null
 
                 if (phone != null && isPhoneNumberAUnicityId(phone)) {
@@ -99,9 +102,9 @@ class ContactsHelper(private val context: Context) {
     }
 
 
-    private fun isPhoneNumberAUnicityId(phoneNumber: String): Boolean {
-        //TODO Implement logic to check if there is unicity id minted to the phone number
-        return phoneNumber.contains("555")
+    private suspend fun isPhoneNumberAUnicityId(phoneNumber: String): Boolean {
+        //TODO implement logic to validate if there is nametag minted by the phone number
+        return false
     }
 
     private data class ContactInfo(

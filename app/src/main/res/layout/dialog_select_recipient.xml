@@ -1,87 +1,131 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:paddingHorizontal="35dp"
-    android:background="@drawable/welcome_bg">
+    android:background="@drawable/welcome_bg"
+    android:fillViewport="true">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Select recipient"
-        android:textColor="#80FFFFFF"
-        android:textSize="40sp"
-        android:fontFamily="@font/inter_bold" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_marginTop="-10dp"
-        android:layout_height="wrap_content"
-        android:text="To send"
-        android:textColor="@android:color/white"
-        android:textSize="48sp"
-        android:layout_marginBottom="60dp"
-        android:fontFamily="@font/inter_bold" />
-
-    <RelativeLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/bg_nametag_selector">
+        android:paddingHorizontal="35dp"
+        android:paddingBottom="35dp">
 
-        <ImageButton
-            android:id="@+id/btnOpenContacts"
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guidelineTop"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:paddingStart="12dp"
-            android:paddingEnd="16dp"
-            android:src="@drawable/ic_contact_search"
-            android:contentDescription="Open contacts"
-            app:tint="#FFFFFF" />
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent="0.20" />
 
-        <EditText
-            android:id="@+id/etNametag"
-            android:layout_width="match_parent"
+        <TextView
+            android:id="@+id/tvTitleSelect"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_toStartOf="@id/btnOpenContacts"
-            android:layout_centerVertical="true"
-            android:background="@null"
-            android:hint="Recipient unicity id"
-            android:textColorHint="#50FFFFFF"
-            android:textSize="16sp"
+            android:fontFamily="@font/inter_bold"
+            android:maxLines="1"
+            android:text="Select recipient"
+            android:textColor="#80FFFFFF"
+            android:textSize="40sp"
+            app:autoSizeMaxTextSize="40sp"
+            app:autoSizeMinTextSize="12sp"
+            app:autoSizeStepGranularity="2sp"
+            app:autoSizeTextType="uniform"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/guidelineTop" />
+
+        <TextView
+            android:id="@+id/tvTitleAction"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="-10dp"
+            android:fontFamily="@font/inter_bold"
+            android:maxLines="1"
+            android:text="To send"
             android:textColor="@android:color/white"
-            android:inputType="numberDecimal"
-            android:padding="16dp"
-            android:maxLines="1" />
+            android:textSize="48sp"
+            app:autoSizeMaxTextSize="48sp"
+            app:autoSizeMinTextSize="12sp"
+            app:autoSizeStepGranularity="2sp"
+            app:autoSizeTextType="uniform"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvTitleSelect" />
 
-    </RelativeLayout>
-    <Button
-        android:id="@+id/btnContinue"
-        android:layout_marginTop="35dp"
-        android:layout_width="280dp"
-        android:layout_height="50dp"
-        android:background="@drawable/btn_green_rounded"
-        android:text="Continue"
-        android:textAllCaps="false"
-        android:textColor="@android:color/black"
-        android:textSize="16sp"
-        android:textStyle="bold" />
+        <RelativeLayout
+            android:id="@+id/inputContainer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="60dp"
+            android:background="@drawable/bg_nametag_selector"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvTitleAction">
 
-    <Button
-        android:id="@+id/btnBack"
-        android:layout_width="280dp"
-        android:layout_height="wrap_content"
-        android:background="@drawable/btn_white_border"
-        android:backgroundTint="#50FFFFFF"
-        android:text="Back"
-        android:textAllCaps="false"
-        android:textColor="#50FFFFFF"
-        android:textSize="16sp"
-        android:layout_marginTop="12dp"/>
+            <ImageButton
+                android:id="@+id/btnOpenContacts"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Open contacts"
+                android:paddingStart="12dp"
+                android:paddingEnd="16dp"
+                android:src="@drawable/ic_contact_search"
+                app:tint="#FFFFFF" />
 
-</LinearLayout>
+            <EditText
+                android:id="@+id/etNametag"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_centerVertical="true"
+                android:layout_toStartOf="@id/btnOpenContacts"
+                android:background="@null"
+                android:hint="Recipient unicity id"
+                android:inputType="text"
+                android:maxLines="1"
+                android:padding="16dp"
+                android:textColor="@android:color/white"
+                android:textColorHint="#50FFFFFF"
+                android:textSize="16sp" />
+
+        </RelativeLayout>
+
+        <Button
+            android:id="@+id/btnContinue"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="35dp"
+            android:background="@drawable/btn_green_rounded"
+            android:text="Continue"
+            android:textAllCaps="false"
+            android:textColor="#262626"
+            android:textSize="18sp"
+            android:fontFamily="@font/inter_semibold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/inputContainer"
+            app:layout_constraintWidth_max="280dp" />
+
+        <Button
+            android:id="@+id/btnBack"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/btn_white_border"
+            android:backgroundTint="#50FFFFFF"
+            android:text="Back"
+            android:textAllCaps="false"
+            android:textColor="#50FFFFFF"
+            android:textSize="18sp"
+            android:fontFamily="@font/inter_semibold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/btnContinue"
+            app:layout_constraintWidth_max="280dp" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

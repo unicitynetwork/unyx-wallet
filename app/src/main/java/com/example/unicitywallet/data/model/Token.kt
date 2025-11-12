@@ -27,7 +27,10 @@ data class Token(
     val amount: String? = null,           // Amount of fungible tokens (e.g., 1000 SOL)
     val coinId: String? = null,         // Hex string coin ID from registry
     val symbol: String? = null,         // e.g., "SOL"
-    val iconUrl: String? = null
+    val iconUrl: String? = null,
+    val transferredAt: Long? = null,
+    val splitSourceTokenId: String? = null,
+    val splitSentAmount: String? = null
 ) {
     fun getFormattedSize(): String {
         return when {

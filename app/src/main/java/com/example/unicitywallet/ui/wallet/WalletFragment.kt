@@ -37,13 +37,13 @@ import androidx.core.graphics.toColorInt
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.unicitywallet.data.model.AggregatedAsset
 import com.example.unicitywallet.data.model.Contact
 import com.example.unicitywallet.data.model.PaymentRequest
 import com.example.unicitywallet.data.model.Token
 import com.example.unicitywallet.databinding.FragmentWalletBinding
 import com.example.unicitywallet.identity.IdentityManager
-import com.example.unicitywallet.nostr.NostrP2PService
 import com.example.unicitywallet.services.ServiceProvider
 import com.example.unicitywallet.token.UnicityTokenRegistry
 import com.example.unicitywallet.transfer.TokenSplitCalculator
@@ -60,6 +60,7 @@ import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.example.unicitywallet.data.contact.ContactDatabase
 import com.example.unicitywallet.data.repository.ContactRepository
+import com.example.unicitywallet.nostr.NostrSdkService
 import com.example.unicitywallet.utils.ContactsHelper
 import com.example.unicitywallet.utils.HexUtils
 import kotlinx.coroutines.Dispatchers
@@ -155,9 +156,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
     }
 
     private fun setupUI(){
-        val prefs = requireContext()
-            .getSharedPreferences("UnicityWalletPrefs", Context.MODE_PRIVATE)
-        currentNametagString = prefs.getString("unicity_tag", null)
+        updateNametagUI()
 
         binding.tvNametag.text = "$currentNametagString@unicity"
         binding.btnReceive.setOnClickListener {
@@ -201,6 +200,9 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
     }
 
     private fun setupRecycler(){
+
+
+
         tokensAdapter = TokensAdapter(
             onSendClick = { token ->
                 showRecipientSelectionDialog { recipientContact ->
@@ -226,6 +228,13 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = assetsAdapter
         }
+
+        binding.rvAssets.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                binding.swipeRefreshLayout.isEnabled = !recyclerView.canScrollVertically(-1)
+            }
+        })
     }
 
     private fun setupTabs(){
@@ -302,6 +311,22 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
             val tokens = viewModel.tokens.value
             tokensAdapter.submitList(tokens)
             binding.emptyStateContainer.visibility = if (tokens.isEmpty()) View.VISIBLE else View.GONE
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateNametagUI()
+    }
+
+    private fun updateNametagUI() {
+        val prefs = requireContext().getSharedPreferences("UnicityWalletPrefs", Context.MODE_PRIVATE)
+        currentNametagString = prefs.getString("unicity_tag", null)
+
+        if (!currentNametagString.isNullOrEmpty()) {
+            binding.tvNametag.text = "$currentNametagString@unicity"
+        } else {
+            binding.tvNametag.text = "No ID Selected"
         }
     }
 
@@ -657,8 +682,8 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 val coinId = org.unicitylabs.sdk.token.fungible.CoinId(HexUtils.decodeHex(asset.coinId))
                 Log.d("WalletFragment", "CoinId bytes: ${coinId.bytes.joinToString { it.toString() }}")
 
-                // Convert wallet tokens to SDK tokens
-                val sdkTokens = tokensForCoin.mapNotNull { token ->
+                // Convert wallet tokens to SDK tokens and DEDUPLICATE by SDK token ID
+                val sdkTokensWithDuplicates = tokensForCoin.mapNotNull { token ->
                     try {
                         val sdkToken = UnicityObjectMapper.JSON.readValue(
                             token.jsonData,
@@ -677,6 +702,17 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                         null
                     }
                 }
+
+                val sdkTokens = sdkTokensWithDuplicates.distinctBy { token ->
+                    token.id.bytes.joinToString("") { "%02x".format(it) }
+                }
+
+                if (sdkTokensWithDuplicates.size != sdkTokens.size) {
+                    Log.w("MainActivity", "⚠️ WARNING: Found ${sdkTokensWithDuplicates.size - sdkTokens.size} duplicate SDK tokens in wallet!")
+                    Log.w("MainActivity", "This indicates wallet storage corruption - same token stored multiple times")
+                }
+
+                Log.d("MainActivity", "Successfully parsed ${sdkTokens.size} unique SDK tokens (${sdkTokensWithDuplicates.size} total)")
 
                 Log.d("WalletFragment", "Successfully parsed ${sdkTokens.size} SDK tokens")
 
@@ -741,12 +777,11 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 val signingService = SigningService.createFromSecret(secret)
 
                 // Step 5: Execute split if needed
-//                val tokensToTransfer = mutableListOf<org.unicitylabs.sdk.token.Token<*>>()
                 var successCount = 0 // Track successful regular transfers
                 var splitResult: TokenSplitExecutor.SplitExecutionResult? = null
 
                 // Get Nostr service early (needed for both paths)
-                val nostrService = NostrP2PService.getInstance(requireContext().applicationContext)
+                val nostrService = NostrSdkService.getInstance(requireContext().applicationContext)
                 if (nostrService == null) {
                     progressDialog.dismiss()
                     Toast.makeText(requireContext(), "Nostr service not available", Toast.LENGTH_LONG).show()
@@ -754,7 +789,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 }
                 if (!nostrService.isRunning()) {
                     nostrService.start()
-                    kotlinx.coroutines.delay(2000)
+                    delay(2000)
                 }
 
                 val recipientPubkey = nostrService.queryPubkeyByNametag(recipientNametag)
@@ -784,9 +819,35 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                         }
                     )
 
+                    Log.d("MainActivity", "=== Adding split tokens to wallet ===")
+                    Log.d("MainActivity", "Tokens kept by sender: ${splitResult.tokensKeptBySender.size}")
+                    Log.d("MainActivity", "Tokens for recipient: ${splitResult.tokensForRecipient.size}")
+                    Log.d("MainActivity", "Burned tokens: ${splitResult.burnedTokens.size}")
+
+                    val burnedToken = splitResult.burnedTokens.firstOrNull()
+                    val sentAmount = splitResult.tokensForRecipient.firstOrNull()?.coins?.map{
+                        coinData -> coinData.coins.values.firstOrNull()
+                    }?.orElse(null)
+
                     // Update local wallet with new sender tokens
                     splitResult.tokensKeptBySender.forEach { newToken ->
-                        viewModel.addNewTokenFromSplit(newToken)
+                        val amount = newToken.coins.map { coinData ->
+                            coinData.coins.values.firstOrNull()
+                        }.orElse(null)
+
+                        Log.d("MainActivity", "Adding KEPT token: ID=${newToken.id.toHexString().take(16)}... amount=$amount")
+
+                        val sourceTokenId = burnedToken?.id?.bytes?.joinToString("") { "%02x".format(it) }
+                        Log.d("MainActivity", "Split source token: $sourceTokenId, sent amount: $sentAmount")
+
+                        viewModel.addNewTokenFromSplit(newToken, sourceTokenId, sentAmount)
+                    }
+
+                    splitResult.tokensForRecipient.forEach { recipientToken ->
+                        val amount = recipientToken.coins.map { coinData ->
+                            coinData.coins.values.firstOrNull()
+                        }.orElse(null)
+                        Log.d("MainActivity", "Recipient token (NOT added to wallet): ID=${recipientToken.id.toHexString().take(16)}... amount=$amount")
                     }
                 }
 
@@ -844,13 +905,12 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                                 "transferTx" to transferTxJson
                             )
                             val payloadJson = UnicityObjectMapper.JSON.writeValueAsString(payload)
-                            val transferPackage = "token_transfer:$payloadJson"
 
-                            Log.d("WalletFragment", "Transfer payload size: ${transferPackage.length / 1024}KB")
+                            Log.d("WalletFragment", "Transfer payload size: ${payloadJson.length / 1024}KB")
 
                             // Send via sendDirectMessage (not sendTokenTransfer) for proper format
                             val sent = try {
-                                nostrService.sendDirectMessage(recipientPubkey!!, transferPackage)
+                                nostrService.sendTokenTransfer(recipientPubkey, payloadJson)
                             } catch (e: Exception) {
                                 Log.e("WalletFragment", "Failed to send token: ${e.message}", e)
                                 false
@@ -876,7 +936,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 if (splitPlan.requiresSplit && splitResult != null) {
                     progressDialog.setMessage("Sending split tokens to recipient...")
 
-                    val nostrService = NostrP2PService.getInstance(requireContext().applicationContext)
+                    val nostrService = NostrSdkService.getInstance(requireContext().applicationContext)
                     if (nostrService != null && nostrService.isRunning()) {
                         // For split tokens, we need to send sourceToken + transferTx (same as regular transfers)
                         // The splitResult has parallel lists: tokensForRecipient and recipientTransferTxs
@@ -886,19 +946,18 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
 
                                 Log.d("WalletFragment", "Sending split token ${sourceToken.id.toHexString().take(8)}... via Nostr")
 
-                                val sourceTokenJson = UnicityObjectMapper.JSON.writeValueAsString(sourceToken)
-                                val transferTxJson = UnicityObjectMapper.JSON.writeValueAsString(transferTx)
+                                val sourceTokenJson = sourceToken.toJson()
+                                val transferTxJson = transferTx.toJson()
 
                                 val payload = mapOf(
                                     "sourceToken" to sourceTokenJson,
                                     "transferTx" to transferTxJson
                                 )
-                                val payloadJson = UnicityObjectMapper.JSON.writeValueAsString(payload)
-                                val transferPackage = "token_transfer:$payloadJson"
+                                val payloadJson = com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(payload)
 
-                                Log.d("WalletFragment", "Split token transfer payload size: ${transferPackage.length / 1024}KB")
+                                Log.d("WalletFragment", "Split token transfer payload size: ${payloadJson.length / 1024}KB")
 
-                                val sent = nostrService.sendDirectMessage(recipientPubkey!!, transferPackage)
+                                val sent = nostrService.sendTokenTransfer(recipientPubkey, payloadJson)
                                 if (!sent) {
                                     Log.e("WalletFragment", "Failed to send split token via Nostr")
                                 }
@@ -967,7 +1026,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 Log.d("WalletFragment", "Starting transfer to nametag: $recipientNametag")
 
                 // Step 2: Query recipient's Nostr pubkey
-                val nostrService = NostrP2PService.getInstance(requireContext().applicationContext)
+                val nostrService = NostrSdkService.getInstance(requireContext().applicationContext)
                 if (nostrService == null) {
                     Toast.makeText(requireContext(), "Nostr service not available", Toast.LENGTH_LONG).show()
                     return@launch
@@ -975,7 +1034,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
 
                 if (!nostrService.isRunning()) {
                     nostrService.start()
-                    kotlinx.coroutines.delay(2000)
+                    delay(2000)
                 }
 
                 val recipientPubkey = nostrService.queryPubkeyByNametag(recipientNametag)
@@ -993,9 +1052,8 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 Log.d("WalletFragment", "Recipient proxy address: ${recipientProxyAddress.address}")
 
                 // Step 4: Parse token and create transfer
-                val sourceToken = UnicityObjectMapper.JSON.readValue(
-                    token.jsonData,
-                    org.unicitylabs.sdk.token.Token::class.java
+                val sourceToken = org.unicitylabs.sdk.token.Token.fromJson(
+                    token.jsonData
                 )
 
                 val identityManager = IdentityManager(requireContext())
@@ -1044,20 +1102,19 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
 
                 // Step 8-9: Create transfer package
                 val transferTransaction = transferCommitment.toTransaction(inclusionProof)
-                val sourceTokenJson = UnicityObjectMapper.JSON.writeValueAsString(sourceToken)
-                val transferTxJson = UnicityObjectMapper.JSON.writeValueAsString(transferTransaction)
+                val sourceTokenJson = sourceToken.toJson()
+                val transferTxJson = transferTransaction.toJson()
 
                 val payload = mapOf(
                     "sourceToken" to sourceTokenJson,
                     "transferTx" to transferTxJson
                 )
-                val payloadJson = UnicityObjectMapper.JSON.writeValueAsString(payload)
-                val transferPackage = "token_transfer:$payloadJson"
+                val payloadJson = com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(payload)
 
-                Log.d("WalletFragment", "Transfer package created (${transferPackage.length} chars)")
+                Log.d("WalletFragment", "Transfer package created (${payloadJson.length} chars)")
 
                 // Step 10: Send via Nostr
-                val sent = nostrService.sendDirectMessage(recipientPubkey, transferPackage)
+                val sent = nostrService.sendTokenTransfer(recipientPubkey, payloadJson)
 
                 if (sent) {
                     Toast.makeText(requireContext(), "✅ Sent to ${recipient.name}!", Toast.LENGTH_SHORT).show()
@@ -1183,7 +1240,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
             val unicityTag = prefs.getString("unicity_tag", "") ?: ""
 
             if (unicityTag.isNotEmpty()) {
-                val nostrService = NostrP2PService.getInstance(requireContext().applicationContext)
+                val nostrService = NostrSdkService.getInstance(requireContext().applicationContext)
                 if (nostrService != null && !nostrService.isRunning()) {
                     nostrService.start()
                     Log.d("WalletFragment", "Nostr P2P service started to listen for token transfers")
@@ -1434,10 +1491,10 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 loadingDialog.show()
 
                 // Get Nostr service
-                val nostrService = NostrP2PService.getInstance(requireContext().applicationContext)
+                val nostrService = NostrSdkService.getInstance(requireContext().applicationContext)
                 if (nostrService == null) {
                     loadingDialog.dismiss()
-                    Toast.makeText(requireContext(), "Nostr service not available", Toast.LENGTH_LONG).show()
+                    Toast.makeText(requireContext(), "Nostr SDK service not available", Toast.LENGTH_LONG).show()
                     return@launch
                 }
 

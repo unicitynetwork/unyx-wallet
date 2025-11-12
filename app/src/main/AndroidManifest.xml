@@ -102,6 +102,13 @@
             android:theme="@style/Theme.UnicityWallet"
             android:configChanges="orientation|screenSize|keyboardHidden"
             />
+        <activity
+            android:name=".ui.settings.NametagManagerActivity"
+            android:exported="false"
+            android:label="Manage Nametags"
+            android:theme="@style/Theme.UnicityWallet"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            />
     </application>
 
 </manifest>

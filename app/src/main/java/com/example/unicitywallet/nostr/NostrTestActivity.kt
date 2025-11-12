@@ -23,7 +23,7 @@ class NostrTestActivity : AppCompatActivity() {
         private const val TAG = "NostrTest"
     }
 
-    private lateinit var nostrService: NostrP2PService
+    private lateinit var nostrService: NostrSdkService
     private lateinit var statusText: TextView
     private lateinit var publicKeyText: TextView
     private lateinit var messageInput: EditText
@@ -96,11 +96,11 @@ class NostrTestActivity : AppCompatActivity() {
             userPublicKey = "test_public_key"
         )
 
-        nostrService = if (service is NostrP2PService) {
+        nostrService = if (service is NostrSdkService) {
             service
         } else {
             // Fall back to direct instantiation if factory returns wrong type
-            NostrP2PService.getInstance(this) ?: throw IllegalStateException("Failed to create Nostr service")
+            NostrSdkService.getInstance(this) ?: throw IllegalStateException("Failed to create Nostr service")
         }
     }
 

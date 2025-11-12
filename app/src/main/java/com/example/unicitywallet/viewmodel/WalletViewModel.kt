@@ -25,9 +25,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import org.unicitylabs.sdk.serializer.UnicityObjectMapper
 import org.unicitylabs.sdk.signing.SigningService
 import org.unicitylabs.sdk.token.TokenId
 import org.unicitylabs.sdk.token.TokenType
+import java.math.BigInteger
 
 
 class WalletViewModel(application: Application) : AndroidViewModel(application) {
@@ -47,37 +49,58 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
     val isLoading: StateFlow<Boolean> = repository.isLoading
 
     val transactionHistory: StateFlow<List<TransactionEvent>> = repository.tokens
-        .map { tokenList ->
+        .map {
+        tokenList ->
             Log.d("WalletViewModel", "Building transaction history from ${tokenList.size} tokens")
             val events = mutableListOf<TransactionEvent>()
 
             tokenList.forEach { token ->
-                Log.d("WalletViewModel", "Token: ${token.name}, status=${token.status}")
+                Log.d("WalletViewModel", "Token: ${token.name}, status=${token.status}, splitSentAmount=${token.splitSentAmount}")
 
+                if(token.splitSentAmount != null){
+                    val sentToken = token.copy(
+                        amount = token.splitSentAmount,
+                        status = TokenStatus.TRANSFERRED
+                    )
+                    val sentTimestamp = token.timestamp
+                    events.add(
+                        TransactionEvent(
+                            token = sentToken,
+                            type = TransactionType.SENT,
+                            timestamp = sentTimestamp
+                        )
+                    )
+                    Log.d("WalletViewModel", "Added SENT event for split: amount=${token.splitSentAmount} at $sentTimestamp")
+                }
                 // Skip burned tokens (never received by user)
                 if (token.status == TokenStatus.BURNED) {
-                    Log.d("WalletViewModel", "Skipping BURNED token")
+                    Log.d("WalletViewModel", "Skipping BURNED token (already processed splitSentAmount if present)")
                     return@forEach
                 }
 
-                // Every token was received at some point
-                events.add(
-                    TransactionEvent(
-                        token = token,
-                        type = TransactionType.RECEIVED
-                    )
-                )
-                Log.d("WalletViewModel", "Added RECEIVED event")
-
-                // If transferred, also add sent event
-                if (token.status == TokenStatus.TRANSFERRED) {
+                if(token.splitSourceTokenId == null){
                     events.add(
                         TransactionEvent(
                             token = token,
-                            type = TransactionType.SENT
+                            type = TransactionType.RECEIVED,
+                            timestamp = token.timestamp
                         )
                     )
-                    Log.d("WalletViewModel", "Added SENT event")
+                    Log.d("WalletViewModel", "Added RECEIVED event at ${token.timestamp}")
+                }
+
+
+                // If transferred, also add sent event
+                if (token.status == TokenStatus.TRANSFERRED) {
+                    val sentTimestamp = token.transferredAt ?: token.timestamp
+                    events.add(
+                        TransactionEvent(
+                            token = token,
+                            type = TransactionType.SENT,
+                            timestamp = sentTimestamp
+                        )
+                    )
+                    Log.d("WalletViewModel", "Added SENT event at $sentTimestamp")
                 }
             }
 
@@ -122,7 +145,10 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
      */
     fun markTokenAsTransferred(token: Token) {
         viewModelScope.launch {
-            val updatedToken = token.copy(status = TokenStatus.TRANSFERRED)
+            val updatedToken = token.copy(
+                status = TokenStatus.TRANSFERRED,
+                transferredAt = System.currentTimeMillis()
+            )
             repository.updateToken(updatedToken)
         }
     }
@@ -140,8 +166,27 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
             // Get token registry for decimals lookup
             val registry = UnicityTokenRegistry.getInstance(getApplication())
 
-            // Group by coinId and aggregate
-            tokensWithCoins
+            // CRITICAL: Deduplicate tokens by SDK token ID before aggregating
+            // This prevents inflated balances from duplicate wallet entries
+            val uniqueTokens = tokensWithCoins.distinctBy { token ->
+                try {
+                    token.jsonData?.let { jsonData ->
+                        val sdkToken = org.unicitylabs.sdk.token.Token.fromJson(
+                            jsonData
+                        )
+                        sdkToken.id.bytes.joinToString("") { "%02x".format(it) }
+                    } ?: token.id // Fallback to wallet ID if no jsonData
+                } catch (e: Exception) {
+                    token.id // Fallback to wallet ID if parse fails
+                }
+            }
+
+            if (tokensWithCoins.size != uniqueTokens.size) {
+                Log.w("WalletViewModel", "⚠️ Assets: Removed ${tokensWithCoins.size - uniqueTokens.size} duplicate SDK tokens from balance calculation")
+            }
+
+            // Group by coinId and aggregate (using deduplicated tokens)
+            uniqueTokens
                 .groupBy { it.coinId!! }
                 .map { (coinId, tokensForCoin) ->
                     val symbol = tokensForCoin.first().symbol ?: "UNKNOWN"
@@ -624,9 +669,8 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
                 val tokenToBurn = allTokens.find { walletToken ->
                     try {
                         walletToken.jsonData?.let { jsonData ->
-                            val walletSdkToken = org.unicitylabs.sdk.serializer.UnicityObjectMapper.JSON.readValue(
-                                jsonData,
-                                org.unicitylabs.sdk.token.Token::class.java
+                            val walletSdkToken = org.unicitylabs.sdk.token.Token.fromJson(
+                                jsonData
                             )
                             walletSdkToken.id == sdkToken.id
                         } ?: false
@@ -646,11 +690,11 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun addNewTokenFromSplit(sdkToken: org.unicitylabs.sdk.token.Token<*>) {
+    fun addNewTokenFromSplit(sdkToken: org.unicitylabs.sdk.token.Token<*>, splitSourceTokenId: String? = null, splitSentAmount: BigInteger? = null) {
         viewModelScope.launch {
             try {
-                // Convert SDK token to wallet token format
-                val tokenJson = org.unicitylabs.sdk.serializer.UnicityObjectMapper.JSON.writeValueAsString(sdkToken)
+                Log.d("WalletViewModel", "=== addNewTokenFromSplit called ===")
+                val tokenJson = sdkToken.toJson()
 
                 // Extract coin info
                 val coinsOpt = sdkToken.getCoins()
@@ -673,6 +717,11 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
                 // Use actual SDK token ID (not random nonsense)
                 val tokenIdHex = sdkToken.id.bytes.joinToString("") { "%02x".format(it) }
 
+                Log.d("WalletViewModel", "Split token details:")
+                Log.d("WalletViewModel", "  ID: ${tokenIdHex.take(16)}...")
+                Log.d("WalletViewModel", "  Amount: $amount")
+                Log.d("WalletViewModel", "  CoinId: $coinIdHex")
+
                 // Get symbol and icon from registry
                 val registry = UnicityTokenRegistry.getInstance(getApplication())
                 val coinDef = registry.getCoinDefinition(coinIdHex)
@@ -688,11 +737,19 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
                     symbol = symbol,
                     iconUrl = iconUrl,
                     jsonData = tokenJson,
-                    status = TokenStatus.CONFIRMED
+                    status = TokenStatus.CONFIRMED,
+                    splitSourceTokenId = splitSourceTokenId,
+                    splitSentAmount = splitSentAmount.toString()
                 )
 
                 repository.addToken(walletToken)
-                Log.d("WalletViewModel", "Added split token: $symbol (${amount}) - ${walletToken.id}")
+                Log.d("WalletViewModel", "✅ Added split token to wallet: $symbol amount=$amount id=${walletToken.id.take(16)}...")
+
+                // Log current wallet state
+                Log.d("WalletViewModel", "Current wallet tokens count: ${repository.tokens.value.size}")
+                repository.tokens.value.forEach { token ->
+                    Log.d("WalletViewModel", "  - ${token.symbol} ${token.amount} (status=${token.status}, id=${token.id.take(16)}...)")
+                }
             } catch (e: Exception) {
                 Log.e("WalletViewModel", "Error adding split token", e)
             }
@@ -710,10 +767,7 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
                 val tokenToTransfer = allTokens.find { walletToken ->
                     try {
                         walletToken.jsonData?.let { jsonData ->
-                            val walletSdkToken = org.unicitylabs.sdk.serializer.UnicityObjectMapper.JSON.readValue(
-                                jsonData,
-                                org.unicitylabs.sdk.token.Token::class.java
-                            )
+                            val walletSdkToken = org.unicitylabs.sdk.token.Token.fromJson(jsonData)
                             val matches = walletSdkToken.id == sdkToken.id
                             if (matches) {
                                 Log.d("WalletViewModel", "Found matching token: ${walletToken.id}")
@@ -726,9 +780,12 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
                 }
 
                 if (tokenToTransfer != null) {
-                    val transferredToken = tokenToTransfer.copy(status = TokenStatus.TRANSFERRED)
+                    val transferredToken = tokenToTransfer.copy(
+                        status = TokenStatus.TRANSFERRED,
+                        transferredAt = System.currentTimeMillis()
+                    )
                     repository.updateToken(transferredToken)
-                    Log.d("WalletViewModel", "✅ Marked token as TRANSFERRED: ${tokenToTransfer.id}, status=${transferredToken.status}")
+                    Log.d("WalletViewModel", "✅ Marked token as TRANSFERRED: ${tokenToTransfer.id}, status=${transferredToken.status}, transferredAt=${transferredToken.transferredAt}")
                 } else {
                     Log.e("WalletViewModel", "❌ Token not found in wallet for transfer marking!")
                 }

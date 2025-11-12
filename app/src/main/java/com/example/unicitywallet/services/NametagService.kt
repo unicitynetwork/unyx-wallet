@@ -7,6 +7,7 @@ import android.net.NetworkCapabilities
 import android.util.Log
 import cash.z.ecc.android.random.SecureRandom
 import com.example.unicitywallet.identity.IdentityManager
+import com.example.unicitywallet.nostr.NostrSdkService
 import com.example.unicitywallet.utils.HexUtils
 import com.example.unicitywallet.utils.WalletConstants
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +22,6 @@ import org.unicitylabs.sdk.api.SubmitCommitmentStatus
 import org.unicitylabs.sdk.bft.RootTrustBase
 import org.unicitylabs.sdk.hash.HashAlgorithm
 import org.unicitylabs.sdk.predicate.embedded.UnmaskedPredicate
-import org.unicitylabs.sdk.serializer.UnicityObjectMapper
 import org.unicitylabs.sdk.signing.SigningService
 import org.unicitylabs.sdk.token.Token
 import org.unicitylabs.sdk.token.TokenId
@@ -35,6 +35,17 @@ import org.unicitylabs.sdk.verification.VerificationException
 import java.io.File
 import java.util.concurrent.TimeUnit
 
+sealed class MintResult {
+    data class Success(val token: Token<*>) : MintResult()
+    data class Warning(val token: Token<*>, val message: String) : MintResult()
+    data class Error(val message: String) : MintResult()
+}
+
+enum class NametagStatus {
+    VERIFIED,           // Blockchain + Nostr OK
+    BLOCKCHAIN_ONLY,    // Blockchain OK, Nostr missing
+    UNKNOWN
+}
 class NametagService(
     private val context: Context,
     private val stateTransitionClient: StateTransitionClient = ServiceProvider.stateTransitionClient,
@@ -56,6 +67,69 @@ class NametagService(
         val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
                 capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    }
+
+    fun setActiveNametag(nametag: String) {
+        val sharedPrefs = context.getSharedPreferences("UnicityWalletPrefs", Context.MODE_PRIVATE)
+        sharedPrefs.edit().putString("unicity_tag", nametag).apply()
+        Log.d(TAG, "Active nametag saved to prefs: $nametag")
+    }
+
+    fun getActiveNametag(): String? {
+        val sharedPrefs = context.getSharedPreferences("UnicityWalletPrefs", Context.MODE_PRIVATE)
+        return sharedPrefs.getString("unicity_tag", null)
+    }
+
+    suspend fun mintNameTagAndPublish(nametag: String): MintResult = withContext(Dispatchers.IO){
+        try {
+            val cleanTag = nametag.removePrefix("@unicity").removePrefix("@").trim()
+            // 1. Get wallet address
+            val ownerAddress = identityManager.getWalletAddress()
+                ?: return@withContext MintResult.Error("Wallet identity not found")
+
+            // 2. Mint nametag
+            val token = mintNameTag(cleanTag, ownerAddress)
+                ?: return@withContext MintResult.Error("Failed to mint nametag on blockchain")
+
+            setActiveNametag(nametag)
+            // 3. Publish minted nametag to nostr
+            try {
+                val nostrService = NostrSdkService.getInstance(context)
+                if (nostrService != null) {
+                    if (!nostrService.isRunning()) {
+                        Log.d(TAG, "Starting Nostr service...")
+                        nostrService.start()
+                        delay(3000) // Ждем коннекта
+                        Log.d(TAG, "Nostr service connection delay complete")
+                    }
+
+                    val proxyAddress = getProxyAddress(token)
+                    Log.d(TAG, "Publishing binding: $cleanTag -> $proxyAddress")
+
+                    val published = nostrService.publishNametagBinding(
+                        nametagId = cleanTag,
+                        unicityAddress = proxyAddress.toString()
+                    )
+
+                    if (published) {
+                        Log.d(TAG, "✅ Nametag binding published!")
+                        return@withContext MintResult.Success(token)
+                    } else {
+                        Log.w(TAG, "❌ Failed to publish nametag binding")
+                        return@withContext MintResult.Warning(token, "Minted, but failed to publish to Nostr network")
+                    }
+                } else {
+                    return@withContext MintResult.Warning(token, "Nostr service not available")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error publishing to Nostr", e)
+                return@withContext MintResult.Warning(token, "Minted, but Nostr error: ${e.message}")
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Critical error in mintAndPublish", e)
+            return@withContext MintResult.Error(e.message ?: "Unknown error")
+        }
     }
 
     suspend fun mintNameTag(
@@ -215,13 +289,13 @@ class NametagService(
             // This format can be exported/imported as a .txf file
             val nametagData = mapOf(
                 "nametag" to nametag,
-                "token" to UnicityObjectMapper.JSON.writeValueAsString(nametagToken),
+                "token" to nametagToken.toJson(),
                 "timestamp" to System.currentTimeMillis(),
                 "format" to "txf",
                 "version" to "2.0"
             )
 
-            val jsonData = UnicityObjectMapper.JSON.writeValueAsString(nametagData)
+            val jsonData = com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(nametagData)
             file.writeText(jsonData)
 
             Log.d(TAG, "Nametag saved to file: ${file.absolutePath}")
@@ -239,15 +313,15 @@ class NametagService(
             Log.d(TAG, "Importing nametag: $nametagString")
 
             val token = try {
-                val wrapper = UnicityObjectMapper.JSON.readTree(jsonData)
+                val wrapper = com.fasterxml.jackson.databind.ObjectMapper().readTree(jsonData)
                 if (wrapper.has("token")) {
                     val tokenJson = wrapper.get("token").asText()
-                    UnicityObjectMapper.JSON.readValue(tokenJson, Token::class.java)
+                    Token.fromJson(tokenJson)
                 } else {
-                    UnicityObjectMapper.JSON.readValue(jsonData, Token::class.java)
+                    Token.fromJson(jsonData)
                 }
             } catch (e: Exception) {
-                UnicityObjectMapper.JSON.readValue(jsonData, Token::class.java)
+                Token.fromJson(jsonData)
             }
 
             // Save the imported nametag
@@ -270,11 +344,11 @@ class NametagService(
             }
 
             val jsonData = file.readText()
-            val nametagData = UnicityObjectMapper.JSON.readTree(jsonData)
+            val nametagData = com.fasterxml.jackson.databind.ObjectMapper().readTree(jsonData)
 
             // Extract token data - it's stored as a string, not an object
             val tokenJson = nametagData.get("token").asText()
-            val token = UnicityObjectMapper.JSON.readValue(tokenJson, Token::class.java)
+            val token = Token.fromJson(tokenJson)
 
             Log.d(TAG, "Nametag loaded from storage: $nametag")
             return@withContext token
@@ -310,7 +384,7 @@ class NametagService(
             nametagFiles.mapNotNull { file ->
                 try {
                     val jsonData = file.readText()
-                    val nametagData = UnicityObjectMapper.JSON.readTree(jsonData)
+                    val nametagData = com.fasterxml.jackson.databind.ObjectMapper().readTree(jsonData)
                     nametagData.get("nametag")?.asText()
                 } catch (e: Exception) {
                     Log.e(TAG, "Error reading nametag from file: ${file.name}", e)
@@ -344,11 +418,11 @@ class NametagService(
             }
 
             val jsonData = file.readText()
-            val nametagData = UnicityObjectMapper.JSON.readTree(jsonData)
+            val nametagData = com.fasterxml.jackson.databind.ObjectMapper().readTree(jsonData)
 
             // Extract token data - it's stored as a string, not an object
             val tokenJson = nametagData.get("token").asText()
-            val token = UnicityObjectMapper.JSON.readValue(tokenJson, Token::class.java)
+            val token = Token.fromJson(tokenJson)
 
             Log.d(TAG, "Nametag loaded from storage: $nametagString")
             return@withContext token

@@ -2,7 +2,7 @@ package com.example.unicitywallet.p2p
 
 import android.content.Context
 import android.util.Log
-import com.example.unicitywallet.nostr.NostrP2PService
+import com.example.unicitywallet.nostr.NostrSdkService
 
 /**
  * Factory to create and manage P2P service instances
@@ -58,17 +58,17 @@ object P2PServiceFactory {
 
         currentInstance = when (currentServiceType) {
             ServiceType.NOSTR -> {
-                Log.d(TAG, "Initializing Nostr P2P service")
-                val nostrService = NostrP2PService.getInstance(context)
+                Log.d(TAG, "Initializing Nostr SDK service")
+                val nostrService = NostrSdkService.getInstance(context)
                 if (nostrService != null) {
-                    Log.d(TAG, "Nostr service created successfully")
+                    Log.d(TAG, "Nostr SDK service created successfully")
                     // Start the service if not already running
                     if (!nostrService.isRunning()) {
                         nostrService.start()
-                        Log.d(TAG, "Nostr service started")
+                        Log.d(TAG, "Nostr SDK service started")
                     }
                 } else {
-                    Log.e(TAG, "Failed to create Nostr service")
+                    Log.e(TAG, "Failed to create Nostr SDK service")
                 }
                 nostrService
             }

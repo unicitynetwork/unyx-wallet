@@ -34,7 +34,7 @@ object ServiceProvider {
             try {
                 val inputStream: InputStream = context.assets.open("trustbase-testnet.json")
                 val json =inputStream.bufferedReader().use { it.readText() }
-                val trustBase = UnicityObjectMapper.JSON.readValue(json, RootTrustBase::class.java)
+                val trustBase = RootTrustBase.fromJson(json)
                 cachedTrustBase = trustBase
                 return trustBase
             } catch (e: Exception) {
@@ -46,7 +46,7 @@ object ServiceProvider {
             val inputStream = javaClass.classLoader?.getResourceAsStream("trustbase-testnet.json")
             if (inputStream != null) {
                 val json = inputStream.bufferedReader().use { it.readText() }
-                val trustBase = UnicityObjectMapper.JSON.readValue(json, RootTrustBase::class.java)
+                val trustBase = RootTrustBase.fromJson(json)
                 cachedTrustBase = trustBase
                 return trustBase
             }

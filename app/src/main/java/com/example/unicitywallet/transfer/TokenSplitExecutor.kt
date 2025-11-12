@@ -239,9 +239,24 @@ class TokenSplitExecutor(
         val senderTokenInfo = mintedTokens.find { !it.isForRecipient }
             ?: throw Exception("Sender token not found in minted tokens")
 
+        Log.d(TAG, "=== Creating split token objects ===")
+        Log.d(TAG, "Recipient token ID: ${recipientTokenInfo.tokenId.toHexString().take(16)}...")
+        Log.d(TAG, "Sender token ID: ${senderTokenInfo.tokenId.toHexString().take(16)}...")
+
         // Create and verify both split tokens (both owned by sender)
         val recipientTokenBeforeTransfer = createAndVerifySplitToken(recipientTokenInfo, signingService, "recipient (before transfer)")
         val senderToken = createAndVerifySplitToken(senderTokenInfo, signingService, "sender")
+
+        val recipientAmount = recipientTokenBeforeTransfer.coins.map {
+            it.coins[coinId]
+        }.orElse(null)
+
+        val senderAmount = senderToken.coins.map {
+            it.coins[coinId]
+        }.orElse(null)
+
+        Log.d(TAG, "Recipient token amount: $recipientAmount (this will be SENT)")
+        Log.d(TAG, "Sender token amount: $senderAmount (this will be KEPT)")
 
         // Step 3: Transfer recipient token to recipient's ProxyAddress
         Log.d(TAG, "Transferring recipient token to ${recipientAddress.address}...")

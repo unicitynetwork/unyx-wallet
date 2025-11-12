@@ -35,6 +35,7 @@
 
     <!-- Profile row -->
     <androidx.cardview.widget.CardView
+        android:id="@+id/nametagManager"
         android:layout_width="match_parent"
         android:layout_height="61dp"
         app:cardBackgroundColor="#252525"
