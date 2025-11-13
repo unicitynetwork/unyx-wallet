@@ -20,6 +20,7 @@ import android.os.Vibrator
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
+import android.view.WindowManager
 import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.Button
@@ -403,30 +404,6 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
         }
     }
 
-//    private fun showTokenSendMethodDialog(token: Token) {
-//        currentContactDialog = ContactListDialog(
-//            context = requireContext(),
-//            onContactSelected = { selectedContact ->
-//                if (selectedContact.hasUnicityTag()) {
-//                    // Get asset info for this token
-//                    val asset = viewModel.aggregatedAssets.value.find { it.coinId == token.coinId }
-//                    if (asset != null) {
-//                        sendTokenViaNostr(token, selectedContact)
-//                    } else {
-//                        Toast.makeText(requireContext(), "Asset not found", Toast.LENGTH_SHORT).show()
-//                    }
-//                } else {
-//                    AlertDialog.Builder(requireContext())
-//                        .setTitle("Cannot Send")
-//                        .setMessage("This contact doesn't have a @unicity nametag. Transfers require @unicity nametags.")
-//                        .setPositiveButton("OK", null)
-//                        .show()
-//                }
-//            }
-//        )
-//        currentContactDialog?.show()
-//    }
-
     private fun showRecipientSelectionDialog(onRecipientConfirmed: (Contact) -> Unit) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_select_recipient, null)
         val etNametag = dialogView.findViewById<EditText>(R.id.etNametag)
@@ -468,6 +445,8 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
             dialog.dismiss()
         }
 
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
+
         dialog.show()
     }
 
@@ -483,6 +462,8 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 }
             }
         )
+        currentContactDialog?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
+
         currentContactDialog?.show()
     }
 
@@ -524,6 +505,8 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
         btnCancel.setOnClickListener {
             dialog.dismiss()
         }
+
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
 
         dialog.show()
     }
@@ -587,6 +570,8 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
             .setCancelable(false)
             .create()
 
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
+
         dialog.show()
     }
     private fun showAssetSendAmountDialog(asset: AggregatedAsset, recipient: String) {
@@ -602,8 +587,10 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_amount_input, null)
         val etAmount = dialogView.findViewById<EditText>(R.id.etAmount)
         val tvBalance = dialogView.findViewById<TextView>(R.id.tvBalance)
-        val btnSend = dialogView.findViewById<Button>(R.id.btnSend)
+        val btnSend = dialogView.findViewById<FrameLayout>(R.id.btnSend)
         val btnCancel = dialogView.findViewById<Button>(R.id.btnCancel)
+        val btnText = dialogView.findViewById<TextView>(R.id.tvBtnText)
+        val progressBar = dialogView.findViewById<View>(R.id.progressBarSend)
 
         val formattedBalance = asset.getFormattedAmount()
         tvBalance.text = "Balance: $formattedBalance ${asset.symbol}"
@@ -614,6 +601,11 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
         btnSend.setOnClickListener {
             val amountStr = etAmount.text.toString()
             if(amountStr.isNotEmpty()){
+                //Close keyboard on send click
+                val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                imm.hideSoftInputFromWindow(etAmount.windowToken, 0)
+                etAmount.clearFocus()
+
                 try {
                     val amountDecimal = java.math.BigDecimal(amountStr)
                     val multiplier = java.math.BigDecimal.TEN.pow(asset.decimals)
@@ -631,14 +623,22 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                         return@setOnClickListener
                     }
 
+                    btnSend.isEnabled = false
+                    btnCancel.isEnabled = false
+                    btnText.visibility = View.GONE
+                    progressBar.visibility = View.VISIBLE
+
                     sendTokensWithSplitting(
                         tokensForCoin = tokensForCoin,
                         targetAmount = amountInSmallestUnit,
                         asset = asset,
-                        recipient = recipient
+                        recipient = recipient,
+                        onComplete = {
+                            requireActivity().runOnUiThread {
+                                dialog.dismiss()
+                            }
+                        }
                     )
-
-                    dialog.dismiss()
                 } catch (e: NumberFormatException) {
                     Toast.makeText(requireContext(), "Invalid amount", Toast.LENGTH_SHORT).show()
                 }
@@ -649,6 +649,8 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
             dialog.dismiss()
         }
 
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
+
         dialog.show()
 
     }
@@ -657,17 +659,10 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
         tokensForCoin: List<Token>,
         targetAmount: java.math.BigInteger,
         asset: AggregatedAsset,
-        recipient: String
+        recipient: String,
+        onComplete: () -> Unit
     ) {
         lifecycleScope.launch {
-            // Show progress dialog (outside try so it's always accessible for dismiss)
-            val progressDialog = android.app.ProgressDialog(requireContext()).apply {
-                setTitle("Processing Transfer")
-                setMessage("Calculating optimal transfer strategy...")
-                setCancelable(false)
-                show()
-            }
-
             try {
 
                 // Step 1: Calculate optimal split plan
@@ -728,7 +723,6 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
 
                 // Check if insufficient balance BEFORE calling calculator
                 if (totalAvailable < targetAmount) {
-                    progressDialog.dismiss()
                     val availableDecimal = java.math.BigDecimal(totalAvailable).divide(java.math.BigDecimal.TEN.pow(asset.decimals)).stripTrailingZeros()
                     val requestedDecimal = java.math.BigDecimal(targetAmount).divide(java.math.BigDecimal.TEN.pow(asset.decimals)).stripTrailingZeros()
                     val message = "Insufficient balance!\n\nRequested: $requestedDecimal ${asset.symbol}\nAvailable: $availableDecimal ${asset.symbol}"
@@ -740,7 +734,6 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 val splitPlan = calculator.calculateOptimalSplit(sdkTokens, targetAmount, coinId)
 
                 if (splitPlan == null) {
-                    progressDialog.dismiss()
                     Log.e("WalletFragment", "Split calculator returned null - unexpected!")
                     Toast.makeText(requireContext(), "Cannot create transfer plan. This should not happen - check logs.", Toast.LENGTH_LONG).show()
                     return@launch
@@ -755,7 +748,6 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                     ?.trim()
 
                 if (recipientNametag.isNullOrEmpty()) {
-                    progressDialog.dismiss()
                     Toast.makeText(requireContext(), "Invalid recipient nametag", Toast.LENGTH_LONG).show()
                     return@launch
                 }
@@ -768,7 +760,6 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 val identityManager = IdentityManager(requireContext())
                 val identity = identityManager.getCurrentIdentity()
                 if (identity == null) {
-                    progressDialog.dismiss()
                     Toast.makeText(requireContext(), "Wallet identity not found", Toast.LENGTH_LONG).show()
                     return@launch
                 }
@@ -783,7 +774,6 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 // Get Nostr service early (needed for both paths)
                 val nostrService = NostrSdkService.getInstance(requireContext().applicationContext)
                 if (nostrService == null) {
-                    progressDialog.dismiss()
                     Toast.makeText(requireContext(), "Nostr service not available", Toast.LENGTH_LONG).show()
                     return@launch
                 }
@@ -794,14 +784,12 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
 
                 val recipientPubkey = nostrService.queryPubkeyByNametag(recipientNametag)
                 if (recipientPubkey == null) {
-                    progressDialog.dismiss()
                     Toast.makeText(requireContext(), "Recipient not found", Toast.LENGTH_LONG).show()
                     return@launch
                 }
 
                 // Step 5a: Execute split if needed
                 if (splitPlan.requiresSplit) {
-                    progressDialog.setMessage("Executing token split...")
 
                     val executor = TokenSplitExecutor(
                         ServiceProvider.stateTransitionClient,
@@ -854,7 +842,6 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 // Step 5b: Create transfer transactions for direct tokens (if any)
                 // These need to be transferred whether or not a split happened
                 if (splitPlan.tokensToTransferDirectly.isNotEmpty()) {
-                    progressDialog.setMessage("Creating transfer transactions...")
 
                     for (tokenToTransfer in splitPlan.tokensToTransferDirectly) {
                         val salt = ByteArray(32)
@@ -934,8 +921,6 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 // Step 6: Send SPLIT tokens via Nostr (if any)
                 // Regular tokens already sent in the else block above
                 if (splitPlan.requiresSplit && splitResult != null) {
-                    progressDialog.setMessage("Sending split tokens to recipient...")
-
                     val nostrService = NostrSdkService.getInstance(requireContext().applicationContext)
                     if (nostrService != null && nostrService.isRunning()) {
                         // For split tokens, we need to send sourceToken + transferTx (same as regular transfers)
@@ -968,8 +953,6 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                     }
                 }
 
-                progressDialog.dismiss()
-
                 // Calculate total sent: direct transfers + split tokens
                 val totalSent = successCount + (splitResult?.tokensForRecipient?.size ?: 0)
 
@@ -982,9 +965,10 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 }
 
             } catch (e: Exception) {
-                progressDialog.dismiss()
                 Log.e("WalletFragment", "Error in sendTokensWithSplitting", e)
                 Toast.makeText(requireContext(), "Transfer error: ${e.message}", Toast.LENGTH_LONG).show()
+            } finally {
+                onComplete()
             }
         }
     }
@@ -1387,7 +1371,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
     private fun showNostrTransferAssetSelector(recipientNametag: String, recipientPubkey: String) {
         // Step 1: Show asset selection dialog
         val dialogView = layoutInflater.inflate(R.layout.dialog_select_asset, null)
-        val rvAssets = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvAssets)
+        val rvAssets = dialogView.findViewById<RecyclerView>(R.id.rvAssets)
         val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
 
         // Get assets from aggregated view (only those with balance)
@@ -1406,7 +1390,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
             .create()
 
         // Setup RecyclerView with AssetSelectorAdapter
-        rvAssets.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(requireContext())
+        rvAssets.layoutManager = LinearLayoutManager(requireContext())
         val adapter = AssetSelectorAdapter(availableAssets) { selectedAsset ->
             assetDialog.dismiss()
             // Step 2: Show amount dialog for selected asset
@@ -1469,7 +1453,13 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 Log.d("MainActivity", "🚀 Calling sendTokensWithSplitting...")
 
                 // 4. Use existing sendTokensWithSplitting logic
-                sendTokensWithSplitting(tokensForCoin, amount, asset, recipientContact.unicityId!!)
+                sendTokensWithSplitting(
+                    tokensForCoin,
+                    amount,
+                    asset,
+                    recipientContact.unicityId!!,
+                    onComplete = {}
+                )
 
             } catch (e: Exception) {
                 Log.e("MainActivity", "Error executing Nostr transfer", e)

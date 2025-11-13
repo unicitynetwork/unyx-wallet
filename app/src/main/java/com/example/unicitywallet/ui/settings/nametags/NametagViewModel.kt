@@ -45,7 +45,7 @@ class NametagViewModel(
                 NametagItemUi(
                     name = tag,
                     isActive = tag == activeTag,
-                    status = NametagStatus.VERIFIED // Пока ставим OK, можно добавить проверку validateNametag()
+                    status = NametagStatus.VERIFIED
                 )
             }
 
@@ -89,7 +89,6 @@ class NametagViewModel(
         }
     }
 
-    // Сделать тег активным при клике на список
     fun selectNametag(nametag: String) {
         nametagService.setActiveNametag(nametag)
         loadData()

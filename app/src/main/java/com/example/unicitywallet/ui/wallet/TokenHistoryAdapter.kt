@@ -86,7 +86,6 @@ class TokenHistoryAdapter(
                 }
             }
             dateText.text = date
-
         }
     }
 }
