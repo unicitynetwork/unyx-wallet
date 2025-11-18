@@ -14,8 +14,21 @@
         <LinearLayout
             android:id="@+id/layoutWallet"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" android:orientation="vertical">
+            android:layout_height="match_parent"
+            android:orientation="vertical">
 
+            <TextView
+                android:id="@+id/tvDemoBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#FFD600"
+                android:text="Important: This is the Demo version of the wallet"
+                android:textColor="#262626"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/inter_bold"
+                android:gravity="center"
+                android:padding="12dp"/>
             <LinearLayout
                 android:id="@+id/headerContainer"
                 android:layout_width="match_parent"

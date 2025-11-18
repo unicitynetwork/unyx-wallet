@@ -2,6 +2,7 @@ package com.example.unicitywallet.ui.wallet
 
 import android.animation.ObjectAnimator
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.activity.viewModels
@@ -64,12 +65,18 @@ class WalletActivity : AppCompatActivity() {
 
         tabs.forEachIndexed { index, tab ->
             tab.setOnClickListener {
-                if (selectedIndex != index) {
-                    moveIndicatorTo(index)
-                    highlightTab(index, icons)
-                    changeFragment(index)
-                    selectedIndex = index
+                if (selectedIndex == index) return@setOnClickListener
+
+                //Show toast while other activities are not implemented
+                if (index > 1) {
+                    Toast.makeText(this, "Coming Soon", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
                 }
+
+                moveIndicatorTo(index)
+                highlightTab(index, icons)
+                changeFragment(index)
+                selectedIndex = index
             }
         }
 
