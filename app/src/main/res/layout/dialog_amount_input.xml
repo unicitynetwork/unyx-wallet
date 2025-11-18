@@ -1,131 +1,139 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:paddingHorizontal="35dp"
-    android:background="@drawable/welcome_bg">
+    android:background="@drawable/welcome_bg"
+    android:fillViewport="true">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Select amount"
-        android:textColor="#80FFFFFF"
-        android:textSize="40sp"
-        android:fontFamily="@font/inter_bold" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_marginTop="-10dp"
-        android:layout_height="wrap_content"
-        android:text="To send"
-        android:textColor="@android:color/white"
-        android:textSize="48sp"
-        android:layout_marginBottom="60dp"
-        android:fontFamily="@font/inter_bold"/>
-
-    <TextView
-        android:id="@+id/tvBalance"
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Balance: 0.00 BTC"
-        android:textColor="#50FFFFFF"
-        android:textSize="14sp"
-        android:layout_marginBottom="4dp"
-        android:layout_marginStart="8dp"
-        android:fontFamily="@font/inter_medium"/>
+        android:paddingHorizontal="35dp"
+        android:paddingBottom="35dp">
 
-    <EditText
-        android:id="@+id/etAmount"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/bg_nametag_selector"
-        android:hint="Amount to send"
-        android:textColorHint="#50FFFFFF"
-        android:textSize="16sp"
-        android:textColor="@android:color/white"
-        android:inputType="numberDecimal"
-        android:padding="16dp"
-        android:maxLines="1" />
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guidelineTop"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent="0.2" />
 
-<!--    <LinearLayout-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:orientation="horizontal"-->
-<!--        android:layout_marginTop="16dp"-->
-<!--        android:layout_marginBottom="32dp">-->
+        <TextView
+            android:id="@+id/tvTitleSelect"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter_bold"
+            android:maxLines="1"
+            android:text="Select amount"
+            android:textColor="#80FFFFFF"
+            android:textSize="40sp"
+            app:autoSizeMaxTextSize="40sp"
+            app:autoSizeMinTextSize="12sp"
+            app:autoSizeStepGranularity="2sp"
+            app:autoSizeTextType="uniform"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/guidelineTop" />
 
-<!--        <Button-->
-<!--            android:id="@+id/btn25Percent"-->
-<!--            android:layout_width="0dp"-->
-<!--            android:layout_height="40dp"-->
-<!--            android:layout_weight="1"-->
-<!--            android:background="@drawable/btn_white_border"-->
-<!--            android:backgroundTint="#50FFFFFF"-->
-<!--            android:text="25%"-->
-<!--            android:textAllCaps="false"-->
-<!--            android:textColor="#50FFFFFF"-->
-<!--            android:layout_marginEnd="8dp" />-->
+        <TextView
+            android:id="@+id/tvTitleAction"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="-10dp"
+            android:fontFamily="@font/inter_bold"
+            android:maxLines="1"
+            android:text="To send"
+            android:textColor="@android:color/white"
+            android:textSize="48sp"
+            app:autoSizeMaxTextSize="48sp"
+            app:autoSizeMinTextSize="12sp"
+            app:autoSizeStepGranularity="2sp"
+            app:autoSizeTextType="uniform"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvTitleSelect" />
 
-<!--        <Button-->
-<!--            android:id="@+id/btn50Percent"-->
-<!--            android:layout_width="0dp"-->
-<!--            android:layout_height="40dp"-->
-<!--            android:layout_weight="1"-->
-<!--            android:background="@drawable/btn_white_border"-->
-<!--            android:backgroundTint="#50FFFFFF"-->
-<!--            android:text="50%"-->
-<!--            android:textAllCaps="false"-->
-<!--            android:textColor="#50FFFFFF"-->
-<!--            android:layout_marginEnd="8dp" />-->
+        <TextView
+            android:id="@+id/tvBalance"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="60dp"
+            android:layout_marginBottom="4dp"
+            android:fontFamily="@font/inter_medium"
+            android:text="Balance: 0.00 BTC"
+            android:textColor="#50FFFFFF"
+            android:textSize="14sp"
+            app:layout_constraintTop_toBottomOf="@id/tvTitleAction"
+            tools:layout_editor_absoluteX="35dp" />
 
-<!--        <Button-->
-<!--            android:id="@+id/btn75Percent"-->
-<!--            android:layout_width="0dp"-->
-<!--            android:layout_height="40dp"-->
-<!--            android:layout_weight="1"-->
-<!--            android:background="@drawable/btn_white_border"-->
-<!--            android:backgroundTint="#50FFFFFF"-->
-<!--            android:text="75%"-->
-<!--            android:textAllCaps="false"-->
-<!--            android:textColor="#50FFFFFF"-->
-<!--            android:layout_marginEnd="8dp" />-->
+        <EditText
+            android:id="@+id/etAmount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_nametag_selector"
+            android:hint="Amount to send"
+            android:inputType="numberDecimal"
+            android:maxLines="1"
+            android:padding="16dp"
+            android:textColor="@android:color/white"
+            android:textColorHint="#50FFFFFF"
+            android:textSize="16sp"
+            app:layout_constraintTop_toBottomOf="@id/tvBalance"
+            tools:layout_editor_absoluteX="35dp" />
 
-<!--        <Button-->
-<!--            android:id="@+id/btnMax"-->
-<!--            android:layout_width="0dp"-->
-<!--            android:layout_height="40dp"-->
-<!--            android:layout_weight="1"-->
-<!--            android:background="@drawable/btn_white_border"-->
-<!--            android:backgroundTint="#50FFFFFF"-->
-<!--            android:text="MAX"-->
-<!--            android:textAllCaps="false"-->
-<!--            android:textColor="#50FFFFFF" />-->
-<!--    </LinearLayout>-->
+        <FrameLayout
+            android:id="@+id/btnSend"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="35dp"
+            android:background="@drawable/btn_green_rounded"
+            android:clickable="true"
+            android:focusable="true"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/etAmount"
+            app:layout_constraintWidth_max="280dp">
 
-    <Button
-        android:id="@+id/btnSend"
-        android:layout_marginTop="35dp"
-        android:layout_width="280dp"
-        android:layout_height="50dp"
-        android:background="@drawable/btn_green_rounded"
-        android:text="Send"
-        android:textAllCaps="false"
-        android:textColor="@android:color/black"
-        android:textSize="16sp"
-        android:textStyle="bold" />
+            <TextView
+                android:id="@+id/tvBtnText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:fontFamily="@font/inter_semibold"
+                android:text="Send"
+                android:textColor="#262626"
+                android:textSize="18sp" />
 
-    <Button
-        android:id="@+id/btnCancel"
-        android:layout_width="280dp"
-        android:layout_height="wrap_content"
-        android:background="@drawable/btn_white_border"
-        android:backgroundTint="#50FFFFFF"
-        android:text="Cancel"
-        android:textAllCaps="false"
-        android:textColor="#50FFFFFF"
-        android:textSize="16sp"
-        android:layout_marginTop="12dp"/>
+            <ProgressBar
+                android:id="@+id/progressBarSend"
+                style="?android:attr/progressBarStyleSmall"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:indeterminate="true"
+                android:indeterminateTint="#262626"
+                android:visibility="gone"/>
+        </FrameLayout>
 
-</LinearLayout>
+        <Button
+            android:id="@+id/btnCancel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/btn_white_border"
+            android:backgroundTint="#50FFFFFF"
+            android:fontFamily="@font/inter_semibold"
+            android:text="Cancel"
+            android:textAllCaps="false"
+            android:textColor="#50FFFFFF"
+            android:textSize="18sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/btnSend"
+            app:layout_constraintWidth_max="280dp" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

@@ -11,6 +11,7 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.unicitywallet.viewmodel.WalletViewModel
 import androidx.recyclerview.widget.RecyclerView
+import com.example.unicitywallet.data.model.TransactionEvent
 
 class HistoryFragment : Fragment(R.layout.fragment_transaction_history) {
     private lateinit var binding: FragmentTransactionHistoryBinding

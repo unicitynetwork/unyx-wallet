@@ -2,6 +2,7 @@ package com.example.unicitywallet.ui.wallet
 
 import android.graphics.Color
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -36,33 +37,27 @@ class ContactAdapter(
             binding.contactName.text = contact.name
 
             // Parse address to separate phone/email from unicity tag
-            val addressText = if (contact.address.contains("(") && contact.address.contains("@unicity")) {
-                // Extract phone/email and unicity tag
-                val parts = contact.address.split("(")
-                val primaryAddress = parts[0].trim()
-                val unicityTag = parts.getOrNull(1)?.removeSuffix(")")?.trim() ?: ""
-                "$primaryAddress\n$unicityTag"
+            val addressText = if (contact.hasUnicityTag()) {
+                contact.unicityId
             } else {
-                contact.address
+                ""
             }
-            binding.contactAddress.text = addressText
+            if (addressText.isNullOrBlank()) {
+                binding.contactAddress.visibility = View.GONE
+            } else {
+                binding.contactAddress.visibility = View.VISIBLE
+                binding.contactAddress.text = addressText
+            }
 
             // Set avatar
             binding.avatarText.text = contact.getInitials()
-
-            // Generate a consistent color for the avatar based on the contact ID
             val avatarColor = generateAvatarColor(contact.id)
             binding.avatarContainer.setBackgroundColor(avatarColor)
 
-            // Show Unicity badge if applicable
-            val hasUnicityTag = contact.hasUnicityTag()
-
             // Set visual state based on whether contact has @unicity tag
-            if (!hasUnicityTag) {
+            if (!contact.hasUnicityTag()) {
                 // Make non-@unicity contacts appear slightly disabled
                 binding.root.alpha = 0.6f
-                binding.contactName.setTextColor(Color.GRAY)
-                binding.contactAddress.setTextColor(Color.GRAY)
             } else {
                 // Reset to normal appearance for @unicity contacts
                 binding.root.alpha = 1.0f

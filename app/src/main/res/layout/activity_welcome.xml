@@ -1,87 +1,97 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     android:background="@drawable/welcome_bg">
 
-    <!-- Welcome to txt -->
     <TextView
-        android:id="@+id/tvWelcome"
-        android:layout_width="wrap_content"
+        android:id="@+id/tvDemoBanner"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Welcome to"
-        android:textColor="#80FFFFFF"
-        android:textSize="32sp"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="200dp"
-        android:fontFamily="@font/inter_bold"/>
-
-    <!-- Unicity Wallet txt -->
-    <TextView
-        android:id="@+id/tvAppName"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Unicity Wallet"
-        android:textColor="@android:color/white"
-        android:textSize="40sp"
+        android:background="#FFD600"
+        android:text="Important: This is the Demo version of the wallet"
+        android:textColor="#262626"
+        android:textSize="14sp"
         android:textStyle="bold"
-        android:layout_below="@id/tvWelcome"
-        android:layout_centerHorizontal="true"
-        android:fontFamily="@font/inter_bold"/>
+        android:fontFamily="@font/inter_bold"
+        android:gravity="center"
+        android:padding="12dp"/>
 
-    <!-- Create Wallet Btn-->
-    <FrameLayout
-        android:id="@+id/btnCreateWalletContainer"
-        android:layout_width="280dp"
-        android:layout_height="50dp"
-        android:layout_below="@id/tvAppName"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="60dp">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center">
+
+        <TextView
+            android:id="@+id/tvWelcome"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Welcome to"
+            android:textColor="#80FFFFFF"
+            android:textSize="32sp"
+            android:fontFamily="@font/inter_bold"/>
+
+        <TextView
+            android:id="@+id/tvAppName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Unicity Wallet"
+            android:textColor="@android:color/white"
+            android:textSize="40sp"
+            android:textStyle="bold"
+            android:fontFamily="@font/inter_bold"/>
+
+        <FrameLayout
+            android:id="@+id/btnCreateWalletContainer"
+            android:layout_width="280dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="60dp">
+
+            <Button
+                android:id="@+id/btnCreateWallet"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:text="Create Wallet"
+                android:textStyle="bold"
+                android:background="@drawable/btn_green_rounded"
+                android:textColor="#262626"
+                android:textAllCaps="false"
+                android:textSize="18sp"
+                android:fontFamily="@font/inter_semibold"/>
+
+            <ProgressBar
+                android:id="@+id/btnProgress"
+                style="?android:attr/progressBarStyleSmall"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:indeterminate="true"
+                android:indeterminateTint="#262626"
+                android:visibility="gone"/>
+        </FrameLayout>
 
         <Button
-            android:id="@+id/btnCreateWallet"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:text="Create Wallet"
+            android:id="@+id/btnRecoverWallet"
+            android:layout_width="280dp"
+            android:layout_height="50dp"
+            android:text="Recover Wallet"
             android:textStyle="bold"
-            android:background="@drawable/btn_green_rounded"
-            android:textColor="#262626"
+            android:textColor="@android:color/white"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/btn_white_border"
             android:textAllCaps="false"
             android:textSize="18sp"
             android:fontFamily="@font/inter_semibold"/>
 
         <ProgressBar
-            android:id="@+id/btnProgress"
-            style="?android:attr/progressBarStyleSmall"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_gravity="center"
-            android:indeterminate="true"
-            android:indeterminateTint="#262626"
-            android:visibility="gone"/>
-    </FrameLayout>
+            android:id="@+id/progressBar"
+            style="?android:attr/progressBarStyleLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
 
-    <!-- Recover Wallet Btn -->
-    <Button
-        android:id="@+id/btnRecoverWallet"
-        android:layout_width="280dp"
-        android:layout_height="50dp"
-        android:text="Recover Wallet"
-        android:textStyle="bold"
-        android:textColor="@android:color/white"
-        android:layout_below="@id/btnCreateWalletContainer"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="16dp"
-        android:background="@drawable/btn_white_border"
-        android:textAllCaps="false"
-        android:textSize="18sp"
-        android:fontFamily="@font/inter_semibold"/>
-
-    <ProgressBar
-        android:id="@+id/progressBar"
-        style="?android:attr/progressBarStyleLarge"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:visibility="gone" />
-</RelativeLayout>
+    </LinearLayout>
+</LinearLayout>

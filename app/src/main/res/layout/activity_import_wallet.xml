@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
@@ -12,7 +13,6 @@
         android:gravity="center"
         android:padding="20dp">
 
-        <!-- Градиентная «шапка» -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -26,8 +26,9 @@
 
                 <TextView
                     android:id="@+id/titleSmall"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:textAlignment="center"
                     android:text="Enter your"
                     android:textColor="#FFF6F6"
                     android:textSize="32sp"
@@ -36,16 +37,21 @@
 
                 <TextView
                     android:id="@+id/titleBig"
-                    android:layout_width="wrap_content"
+                    android:textAlignment="center"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Recovery phrase"
                     android:textColor="#FFF6F6"
                     android:textSize="40sp"
+                    android:maxLines="1"
+                    app:autoSizeTextType="uniform"
+                    app:autoSizeMinTextSize="12sp"
+                    app:autoSizeMaxTextSize="40sp"
+                    app:autoSizeStepGranularity="2sp"
                     android:fontFamily="@font/inter_bold"/>
             </LinearLayout>
         </FrameLayout>
 
-        <!-- Сетка 2х6 для 12 слов -->
         <GridLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -56,7 +62,6 @@
             android:rowOrderPreserved="false"
             android:layout_marginTop="16dp">
 
-            <!-- Левая колонка -->
             <EditText
                 android:id="@+id/word1"
                 style="@style/SeedField"
@@ -82,7 +87,6 @@
                 style="@style/SeedField"
                 android:hint="6."/>
 
-            <!-- Правая колонка -->
             <EditText
                 android:id="@+id/word7"
                 style="@style/SeedField"
@@ -109,7 +113,6 @@
                 android:hint="12."/>
         </GridLayout>
 
-        <!-- Кнопка импорта -->
         <Button
             android:id="@+id/btnImport"
             android:layout_width="280dp"

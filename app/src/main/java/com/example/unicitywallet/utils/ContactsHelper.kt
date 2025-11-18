@@ -5,9 +5,14 @@ import android.content.Context
 import android.database.Cursor
 import android.provider.ContactsContract
 import android.util.Log
+import android.widget.Toast
 import com.example.unicitywallet.data.model.Contact
+import com.example.unicitywallet.nostr.NostrSdkService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import org.unicitylabs.sdk.api.RequestId
+import org.unicitylabs.sdk.token.TokenId
 
 class ContactsHelper(private val context: Context) {
 
@@ -15,6 +20,7 @@ class ContactsHelper(private val context: Context) {
         private const val TAG = "ContactsHelper"
     }
 
+    @Throws(SecurityException::class)
     suspend fun loadPhoneContacts(): List<Contact> = withContext(Dispatchers.IO) {
         val contacts = mutableListOf<Contact>()
         val contactsMap = mutableMapOf<String, ContactInfo>()
@@ -22,17 +28,14 @@ class ContactsHelper(private val context: Context) {
         try {
             val contentResolver: ContentResolver = context.contentResolver
 
-            // First, get all contacts with their display names
             val contactsCursor: Cursor? = contentResolver.query(
                 ContactsContract.Contacts.CONTENT_URI,
                 arrayOf(
                     ContactsContract.Contacts._ID,
                     ContactsContract.Contacts.DISPLAY_NAME_PRIMARY,
-                    ContactsContract.Contacts.HAS_PHONE_NUMBER,
                     ContactsContract.Contacts.PHOTO_URI
                 ),
-                null,
-                null,
+                null, null,
                 ContactsContract.Contacts.DISPLAY_NAME_PRIMARY + " ASC"
             )
 
@@ -42,45 +45,17 @@ class ContactsHelper(private val context: Context) {
                     val name = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.Contacts.DISPLAY_NAME_PRIMARY)) ?: continue
                     val photoUri = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.Contacts.PHOTO_URI))
 
-                    contactsMap[id] = ContactInfo(id, name, photoUri)
+                    contactsMap[id] = ContactInfo(id, name, photoUri, null)
                 }
             }
 
-            // Then get email addresses
-            val emailCursor: Cursor? = contentResolver.query(
-                ContactsContract.CommonDataKinds.Email.CONTENT_URI,
-                arrayOf(
-                    ContactsContract.CommonDataKinds.Email.CONTACT_ID,
-                    ContactsContract.CommonDataKinds.Email.ADDRESS
-                ),
-                null,
-                null,
-                null
-            )
-
-            emailCursor?.use { cursor ->
-                while (cursor.moveToNext()) {
-                    val contactId = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Email.CONTACT_ID))
-                    val email = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Email.ADDRESS))
-
-                    contactsMap[contactId]?.let { contactInfo ->
-                        if (!email.isNullOrBlank()) {
-                            contactInfo.emails.add(email)
-                        }
-                    }
-                }
-            }
-
-            // Get phone numbers
             val phoneCursor: Cursor? = contentResolver.query(
                 ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
                 arrayOf(
                     ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
                     ContactsContract.CommonDataKinds.Phone.NUMBER
                 ),
-                null,
-                null,
-                null
+                null, null, null
             )
 
             phoneCursor?.use { cursor ->
@@ -89,14 +64,13 @@ class ContactsHelper(private val context: Context) {
                     val phoneNumber = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER))
 
                     contactsMap[contactId]?.let { contactInfo ->
-                        if (!phoneNumber.isNullOrBlank()) {
-                            contactInfo.phoneNumbers.add(phoneNumber)
+                        if (!phoneNumber.isNullOrBlank() && contactInfo.phoneNumber == null) {
+                            contactInfo.phoneNumber = phoneNumber
                         }
                     }
                 }
             }
 
-            // Get notes
             val notesCursor: Cursor? = contentResolver.query(
                 ContactsContract.Data.CONTENT_URI,
                 arrayOf(
@@ -121,87 +95,82 @@ class ContactsHelper(private val context: Context) {
                 }
             }
 
-            // Convert to Contact objects
             contactsMap.values.forEach { contactInfo ->
-                // Check if notes contain @unicity and extract the tag
+
                 val hasUnicityInNotes = contactInfo.notes?.contains("@unicity", ignoreCase = true) ?: false
-                var unicityTagFromNotes: String? = null
+                val phone = contactInfo.phoneNumber
+                Log.d("WALLET HELPER", "$phone")
+                var contactUnicityId: String? = null
 
                 if (hasUnicityInNotes && contactInfo.notes != null) {
                     val notes = contactInfo.notes ?: ""
-                    val noteMatch = Regex("(\\w+)@unicity", RegexOption.IGNORE_CASE).find(notes)
+                    // Match word characters, hyphens, and dots before @unicity
+                    val noteMatch = Regex("([\\w.-]+)@unicity", RegexOption.IGNORE_CASE).find(notes)
                     if (noteMatch != null) {
-                        unicityTagFromNotes = noteMatch.groupValues[0] // Get the full match including @unicity
+                        contactUnicityId = noteMatch.groupValues[0] // Get the full match including @unicity
                     }
                 }
 
-                // Create a contact for each email
-                contactInfo.emails.forEach { email ->
-                    contacts.add(
-                        Contact(
-                            id = "${contactInfo.id}_email_$email",
-                            name = contactInfo.name,
-                            address = if (hasUnicityInNotes && !email.contains("@unicity", ignoreCase = true) && unicityTagFromNotes != null) {
-                                "$email ($unicityTagFromNotes)"
-                            } else {
-                                email
-                            },
-                            avatarUrl = contactInfo.photoUri,
-                            isUnicityUser = email.contains("@unicity", ignoreCase = true) || hasUnicityInNotes
-                        )
-                    )
+                if (contactUnicityId == null && phone != null && isPhoneNumberAUnicityId(phone)) {
+                    contactUnicityId = phone
                 }
 
-                // Create a contact for each phone number if no emails
-                if (contactInfo.emails.isEmpty() && contactInfo.phoneNumbers.isNotEmpty()) {
-                    contacts.add(
-                        Contact(
-                            id = "${contactInfo.id}_phone",
-                            name = contactInfo.name,
-                            address = if (hasUnicityInNotes && unicityTagFromNotes != null) {
-                                "${contactInfo.phoneNumbers.first()} ($unicityTagFromNotes)"
-                            } else {
-                                contactInfo.phoneNumbers.first()
-                            },
-                            avatarUrl = contactInfo.photoUri,
-                            isUnicityUser = hasUnicityInNotes
-                        )
+                contacts.add(
+                    Contact(
+                        id = contactInfo.id,
+                        name = contactInfo.name,
+                        unicityId = contactUnicityId,
+                        avatarUrl = contactInfo.photoUri,
+                        isFromPhone = true
                     )
-                }
-
-                // If no emails or phones, still add the contact with just the name
-                if (contactInfo.emails.isEmpty() && contactInfo.phoneNumbers.isEmpty()) {
-                    contacts.add(
-                        Contact(
-                            id = contactInfo.id,
-                            name = contactInfo.name,
-                            address = if (hasUnicityInNotes && unicityTagFromNotes != null) {
-                                unicityTagFromNotes
-                            } else {
-                                "No contact info"
-                            },
-                            avatarUrl = contactInfo.photoUri,
-                            isUnicityUser = hasUnicityInNotes
-                        )
-                    )
-                }
+                )
             }
 
             Log.d(TAG, "Loaded ${contacts.size} contacts from phone")
 
+        } catch (se: SecurityException) {
+            Log.w(TAG, "No READ_CONTACTS permission.", se)
+            throw se
         } catch (e: Exception) {
             Log.e(TAG, "Error loading contacts", e)
         }
 
-        contacts.sortedBy { it.name }
+        return@withContext contacts.sortedBy { it.name }
+    }
+
+
+    private suspend fun isPhoneNumberAUnicityId(phoneNumber: String): Boolean {
+        val cleanedPhoneNumber = phoneNumber.replace(Regex("[^\\d+]"), "")
+
+        if (cleanedPhoneNumber.isEmpty()) {
+            return false
+        }
+
+        val nostrService = NostrSdkService.getInstance(context)
+        if (nostrService == null) {
+            Log.w("ContactsHelper", "Nostr service not available")
+            return false
+        }
+
+        if (!nostrService.isRunning()) {
+            nostrService.start()
+            delay(2000)
+        }
+
+        val recipientPubkey = nostrService.queryPubkeyByNametag(cleanedPhoneNumber)
+
+        if (recipientPubkey == null) {
+            return false
+        }
+
+        return true
     }
 
     private data class ContactInfo(
         val id: String,
         val name: String,
         val photoUri: String?,
-        val emails: MutableList<String> = mutableListOf(),
-        val phoneNumbers: MutableList<String> = mutableListOf(),
+        var phoneNumber: String?,
         var notes: String? = null
     )
 }
