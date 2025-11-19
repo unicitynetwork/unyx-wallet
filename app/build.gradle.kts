@@ -13,8 +13,7 @@ android {
     defaultConfig {
         applicationId = "com.example.unicitywallet"
         minSdk = 31
-        //noinspection OldTargetApi
-        targetSdk = 31
+        targetSdk = 33
         versionCode = 1
         versionName = "1.0"
 
@@ -58,10 +57,10 @@ android {
 
 dependencies {
     // Unicity Nostr SDK (includes Nostr client, crypto, nametag binding, token transfer)
-    implementation(project(":unicity-nostr-sdk"))
+    implementation("org.unicitylabs:nostr-sdk:0.0.2")
 
     // Unicity Java SDK: https://jitpack.io/#org.unicitylabs/java-state-transition-sdk
-    implementation("org.unicitylabs:java-state-transition-sdk:1.4.1")
+    implementation("org.unicitylabs:java-state-transition-sdk:1.4.2")
 
     // Required dependencies for Unicity SDK (also used app-wide for JSON serialization)
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.17.0")

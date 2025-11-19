@@ -6,14 +6,13 @@ import org.unicitylabs.sdk.StateTransitionClient
 import org.unicitylabs.sdk.api.AggregatorClient
 import org.unicitylabs.sdk.api.JsonRpcAggregatorClient
 import org.unicitylabs.sdk.bft.RootTrustBase
-import org.unicitylabs.sdk.serializer.UnicityObjectMapper
 import org.unicitylabs.sdk.signing.SigningService
 import com.example.unicitywallet.utils.HexUtils
 import java.io.InputStream
 
 object ServiceProvider {
     val aggregatorClient: AggregatorClient by lazy {
-        JsonRpcAggregatorClient(WalletConstants.UNICITY_AGGREGATOR_URL)
+        JsonRpcAggregatorClient(WalletConstants.UNICITY_AGGREGATOR_URL, WalletConstants.API_KEY)
     }
 
     val stateTransitionClient: StateTransitionClient by lazy {
