@@ -80,6 +80,8 @@ android {
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.06.00"))
 
+    androidTestImplementation(platform("androidx.compose:compose-bom:2024.06.00"))
+
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
