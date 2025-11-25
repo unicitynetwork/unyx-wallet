@@ -17,7 +17,6 @@ class ContactDetailsFragment : Fragment(R.layout.fragment_contact_detail) {
     private var contactId: String? = null
     private var currentContact: Contact? = null
 
-    // 1. Получаем ViewModel, используя фабрику из Activity
     private val viewModel: ContactsViewModel by activityViewModels {
         (requireActivity() as ContactsActivity).viewModelFactory
     }
@@ -31,7 +30,6 @@ class ContactDetailsFragment : Fragment(R.layout.fragment_contact_detail) {
         super.onViewCreated(view, savedInstanceState)
         binding = FragmentContactDetailBinding.bind(view)
 
-        // (Весь остальной код остается БЕЗ ИЗМЕНЕНИЙ)
         setEditMode(false)
 
         binding.btnBack.setOnClickListener {

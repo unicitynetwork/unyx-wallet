@@ -56,7 +56,7 @@
 
             <TextView
                 android:id="@+id/tvNametag"
-                android:text="@unicityName"
+                android:text="unicityName"
                 android:textColor="#80FFFFFF"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

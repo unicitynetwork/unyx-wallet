@@ -75,7 +75,6 @@ class ContactsActivity : AppCompatActivity() {
     }
 
     private fun loadContactsFragment() {
-        // Проверяем, что фрагмент еще не добавлен
         if (supportFragmentManager.findFragmentById(R.id.fragment_container) == null) {
             showFragment(ContactsFragment(), isInitial = true)
         }

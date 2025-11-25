@@ -67,7 +67,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="5dp"
-                android:text="@igor9"
+                android:text="igor9"
                 android:textColor="#80FFFFFF"
                 android:textSize="14sp"
                 android:fontFamily="@font/inter_regular" />

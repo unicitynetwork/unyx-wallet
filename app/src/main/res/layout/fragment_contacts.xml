@@ -42,7 +42,7 @@
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             app:tint="@android:color/white"
-            android:contentDescription="Добавить контакт" />
+            android:contentDescription="Add contact" />
     </RelativeLayout>
 
     <EditText

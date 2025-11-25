@@ -1,6 +1,4 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <!-- Базовый фон: глубокий чёрный снизу -->
     <item>
         <shape android:shape="rectangle">
             <gradient
@@ -13,7 +11,6 @@
         </shape>
     </item>
 
-    <!-- Доп. затемнение, чтобы низ был насыщенно чёрный -->
     <item>
         <shape android:shape="rectangle">
             <gradient

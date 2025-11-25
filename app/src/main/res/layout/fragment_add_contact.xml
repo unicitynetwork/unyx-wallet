@@ -23,7 +23,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:layout_centerVertical="true"
             app:tint="@android:color/white"
-            android:contentDescription="Назад" />
+            android:contentDescription="Back" />
 
         <TextView
             android:layout_width="wrap_content"

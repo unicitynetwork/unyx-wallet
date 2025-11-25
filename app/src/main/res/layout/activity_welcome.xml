@@ -10,7 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="#FFD600"
-        android:text="Important: This is the Demo version of the wallet"
+        android:text="Important: This is the Testnet version of the wallet"
         android:textColor="#262626"
         android:textSize="14sp"
         android:textStyle="bold"

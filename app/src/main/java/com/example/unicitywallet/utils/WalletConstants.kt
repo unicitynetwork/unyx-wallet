@@ -2,6 +2,7 @@ package com.example.unicitywallet.utils
 
 object WalletConstants {
     const val UNICITY_AGGREGATOR_URL = "https://goggregator-test.unicity.network"
+    const val API_KEY = "sk_06365a9c44654841a366068bcfc68986"
 
     object Chain {
         /**

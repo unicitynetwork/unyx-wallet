@@ -680,10 +680,7 @@ class WalletFragment : Fragment(R.layout.fragment_wallet) {
                 // Convert wallet tokens to SDK tokens and DEDUPLICATE by SDK token ID
                 val sdkTokensWithDuplicates = tokensForCoin.mapNotNull { token ->
                     try {
-                        val sdkToken = UnicityObjectMapper.JSON.readValue(
-                            token.jsonData,
-                            org.unicitylabs.sdk.token.Token::class.java
-                        )
+                        val sdkToken = org.unicitylabs.sdk.token.Token.fromJson(token.jsonData)
                         Log.d("WalletFragment", "Parsed SDK token: id=${sdkToken.id.toHexString().take(8)}...")
                         val coins = sdkToken.getCoins()
                         if (coins.isPresent) {

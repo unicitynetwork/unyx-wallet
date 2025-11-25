@@ -8,12 +8,11 @@ plugins {
 android {
     namespace = "com.example.unicitywallet"
     //noinspection GradleDependency
-    compileSdk = 36
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.example.unicitywallet"
         minSdk = 31
-        //noinspection OldTargetApi
         targetSdk = 31
         versionCode = 1
         versionName = "1.0"
@@ -57,11 +56,20 @@ android {
 }
 
 dependencies {
+    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
+
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+
     // Unicity Nostr SDK (includes Nostr client, crypto, nametag binding, token transfer)
-    implementation(project(":unicity-nostr-sdk"))
+    implementation("org.unicitylabs:nostr-sdk:0.0.2")
 
     // Unicity Java SDK: https://jitpack.io/#org.unicitylabs/java-state-transition-sdk
-    implementation("org.unicitylabs:java-state-transition-sdk:1.4.1")
+    implementation("org.unicitylabs:java-state-transition-sdk:1.4.2")
 
     // Required dependencies for Unicity SDK (also used app-wide for JSON serialization)
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.17.0")
@@ -81,10 +89,7 @@ dependencies {
 
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
-    implementation("androidx.activity:activity-compose:1.8.0")
-    implementation("androidx.compose.ui:ui:1.6.8")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.6.8")
-    implementation("androidx.compose.material3:material3:1.2.1")
+    implementation("androidx.activity:activity-compose:1.8.2")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.10.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
@@ -117,7 +122,6 @@ dependencies {
 
     // Glide for image loading and caching
     implementation("com.github.bumptech.glide:glide:4.16.0")
-    implementation(libs.androidx.material3)
     annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
     kapt("com.github.bumptech.glide:compiler:4.16.0")
 
@@ -172,7 +176,6 @@ dependencies {
 
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.6.8")
 
     // Mockito for testing (Java 8 compatible versions)
     androidTestImplementation("org.mockito:mockito-android:4.11.0")
@@ -180,9 +183,6 @@ dependencies {
 
     // Coroutines test
     androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
-
-    debugImplementation("androidx.compose.ui:ui-tooling:1.6.8")
-    debugImplementation("androidx.compose.ui:ui-test-manifest:1.6.8")
 
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }

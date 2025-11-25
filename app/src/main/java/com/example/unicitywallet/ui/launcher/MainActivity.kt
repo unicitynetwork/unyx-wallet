@@ -14,10 +14,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         identityManager = IdentityManager(this)
 
-        // Путь к внутренней директории приложения
+
         val nametagsDir = File(filesDir, "nametags")
 
-        // Проверяем, существует ли папка и не пуста ли она
         val hasNametags = nametagsDir.exists() &&
                 nametagsDir.isDirectory &&
                 nametagsDir.listFiles()?.isNotEmpty() == true
