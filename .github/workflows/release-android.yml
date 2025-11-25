@@ -1,0 +1,165 @@
+name: Release Android APK
+
+run-name: Release v${{ github.event.inputs.version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.2.0)'
+        required: true
+        type: string
+      release_notes:
+        description: 'Release notes (optional)'
+        required: false
+        type: string
+        default: 'New release of Unyx Wallet'
+
+jobs:
+  build-and-release:
+    name: Build and Release v${{ github.event.inputs.version }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Release Configuration
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo " UNYX WALLET RELEASE BUILD"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Version: v${{ github.event.inputs.version }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Triggered by: ${{ github.actor }}"
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build release APK
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Building Unyx Wallet v$VERSION"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          ./gradlew assembleRelease -PversionName=$VERSION
+
+      - name: Verify APK was built
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if [ ! -f app/build/outputs/apk/release/unyx-wallet-*.apk ]; then
+            echo "Error: Release APK not found!"
+            echo "Looking for APK files..."
+            find app/build/outputs -name "*.apk" 2>/dev/null || echo "No APK files found"
+            exit 1
+          fi
+          echo ""
+          echo "Build successful!"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "APK Details:"
+          ls -lh app/build/outputs/apk/release/unyx-wallet-*.apk
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+
+      - name: Rename APK for release
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          echo "Creating release artifact: unyx-wallet-v${VERSION}.apk"
+          cp app/build/outputs/apk/release/unyx-wallet-*-release.apk unyx-wallet-v${VERSION}.apk
+          echo "Release APK ready:"
+          ls -lh unyx-wallet-v${VERSION}.apk
+          echo ""
+
+      - name: Create Git tag
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          echo "Creating git tag: v${VERSION}"
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag -a "v${VERSION}" -m "Release v${VERSION}"
+          git push origin "v${VERSION}"
+          echo "Tag v${VERSION} created and pushed"
+          echo ""
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: Unyx Wallet v${{ github.event.inputs.version }}
+          body: |
+            # Unyx Wallet v${{ github.event.inputs.version }}
+
+            ${{ github.event.inputs.release_notes }}
+
+            ## Installation
+
+            Download `unyx-wallet-v${{ github.event.inputs.version }}.apk` and install on your Android device.
+
+            **Minimum Android version**: Android 12 (API 31)
+
+            ## Features
+
+            - Offline token transfers via NFC + Bluetooth
+            - Nametag binding for easy addressing
+            - P2P messaging with nearby users
+            - Discover wallet users on map
+            - Phone number-based contact discovery
+            - Secure wallet backup to Google Drive
+
+            ## What's New
+
+            See commit history for detailed changes.
+
+            ---
+
+            **Package**: com.example.unicitywallet
+            **Version**: ${{ github.event.inputs.version }}
+            **Build**: ${{ github.run_number }}
+
+          files: |
+            unyx-wallet-v${{ github.event.inputs.version }}.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release Summary
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          APK_SIZE=$(ls -lh unyx-wallet-v${VERSION}.apk | awk '{print $5}')
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Release v${VERSION} Published Successfully!"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Version: v${VERSION}"
+          echo "APK: unyx-wallet-v${VERSION}.apk"
+          echo "Size: ${APK_SIZE}"
+          echo "Git Tag: v${VERSION}"
+          echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/v${VERSION}"
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+
+          # Write to GitHub Step Summary
+          echo "## Release v${VERSION} Published!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: v${VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "- **APK**: unyx-wallet-v${VERSION}.apk" >> $GITHUB_STEP_SUMMARY
+          echo "- **Size**: ${APK_SIZE}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Git Tag**: v${VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release URL**: [View Release](https://github.com/${{ github.repository }}/releases/tag/v${VERSION})" >> $GITHUB_STEP_SUMMARY

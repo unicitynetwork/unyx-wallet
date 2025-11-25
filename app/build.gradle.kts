@@ -5,6 +5,17 @@ plugins {
     id("kotlin-kapt")
 }
 
+// Get version from gradle property (passed via -PversionName=x.y.z) or use default
+val releaseVersionName: String = project.findProperty("versionName")?.toString() ?: "1.0.0"
+val releaseVersionCode: Int = releaseVersionName.split(".").take(3).mapIndexed { index, part ->
+    val num = part.toIntOrNull() ?: 0
+    when (index) {
+        0 -> num * 10000
+        1 -> num * 100
+        else -> num
+    }
+}.sum()
+
 android {
     namespace = "com.example.unicitywallet"
     //noinspection GradleDependency
@@ -14,10 +25,13 @@ android {
         applicationId = "com.example.unicitywallet"
         minSdk = 31
         targetSdk = 31
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = releaseVersionCode
+        versionName = releaseVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Set output APK name
+        setProperty("archivesBaseName", "unyx-wallet-$releaseVersionName")
     }
 
     buildTypes {
@@ -27,6 +41,14 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+
+    applicationVariants.all {
+        val variant = this
+        variant.outputs.all {
+            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            output.outputFileName = "unyx-wallet-${releaseVersionName}-${variant.buildType.name}.apk"
         }
     }
     compileOptions {
