@@ -8,12 +8,12 @@ plugins {
 android {
     namespace = "com.example.unicitywallet"
     //noinspection GradleDependency
-    compileSdk = 36
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.example.unicitywallet"
         minSdk = 31
-        targetSdk = 33
+        targetSdk = 31
         versionCode = 1
         versionName = "1.0"
 
