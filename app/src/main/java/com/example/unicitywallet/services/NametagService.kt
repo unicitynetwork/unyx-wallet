@@ -99,7 +99,7 @@ class NametagService(
                     if (!nostrService.isRunning()) {
                         Log.d(TAG, "Starting Nostr service...")
                         nostrService.start()
-                        delay(3000) // Ждем коннекта
+                        delay(3000)
                         Log.d(TAG, "Nostr service connection delay complete")
                     }
 

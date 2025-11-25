@@ -33,10 +33,8 @@ class RecoveryPhraseActivity : AppCompatActivity() {
 
         setContentView(binding.root)
 
-        // навигация назад
         binding.btnBack.setOnClickListener { finish() }
 
-        // список слов (2 колонки)
         binding.rvWords.apply {
             layoutManager = GridLayoutManager(this@RecoveryPhraseActivity, 2)
             adapter = mnemonicAdapter
@@ -49,18 +47,15 @@ class RecoveryPhraseActivity : AppCompatActivity() {
             mnemonicAdapter.submit(recoveryWords)
         }
 
-        // старт: показываем оверлей и блюрим/затемняем фон
         binding.overlay.isVisible = true
         setBlur(binding.contentContainer, 90f)
         binding.btnCopy.isEnabled = false
 
-        // логика подтверждения
         binding.cbUnderstand.setOnCheckedChangeListener { _, checked ->
             binding.btnReveal.isEnabled = checked
         }
 
         binding.btnReveal.setOnClickListener {
-            // плавно скрываем оверлей
             binding.overlay.animate()
                 .alpha(0f)
                 .setDuration(200L)
@@ -69,12 +64,10 @@ class RecoveryPhraseActivity : AppCompatActivity() {
                     binding.overlay.alpha = 1f
                 }.start()
 
-            // снимаем блюр
             setBlur(binding.contentContainer, 0f)
             binding.btnCopy.isEnabled = true
         }
 
-        // копирование фразы
         binding.btnCopy.setOnClickListener {
             val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
             cm.setPrimaryClip(ClipData.newPlainText("recovery phrase", recoveryWords.joinToString(" ")))
@@ -92,7 +85,6 @@ class RecoveryPhraseActivity : AppCompatActivity() {
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
-    /** Нативный blur на Android 12+, на старых — лёгкое затемнение */
     private fun setBlur(target: View, radius: Float) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             target.setRenderEffect(
@@ -106,7 +98,6 @@ class RecoveryPhraseActivity : AppCompatActivity() {
     }
 }
 
-/** Отступы в Grid, чтобы «чипы» слов выглядели ровно */
 class GridSpacingDecoration(private val span: Int, private val spacingPx: Int) : RecyclerView.ItemDecoration() {
     override fun getItemOffsets(
         outRect: android.graphics.Rect,
@@ -122,7 +113,6 @@ class GridSpacingDecoration(private val span: Int, private val spacingPx: Int) :
     }
 }
 
-/** Простой адаптер для 12 слов — замени на свой, если уже есть */
 class MnemonicAdapter(private val columns: Int = 2)
     : RecyclerView.Adapter<MnemonicAdapter.Holder>() {
 
@@ -136,7 +126,6 @@ class MnemonicAdapter(private val columns: Int = 2)
     private fun rows(): Int = (words.size + columns - 1) / columns
 
     override fun getItemCount(): Int = rows() * columns
-    // ↑ чтобы сетка была ровной: при нечётном количестве правый нижний будет пустым
 
     override fun onCreateViewHolder(p: ViewGroup, vt: Int): Holder {
         val v = LayoutInflater.from(p.context).inflate(R.layout.item_mnemonic_word, p, false)
@@ -144,17 +133,16 @@ class MnemonicAdapter(private val columns: Int = 2)
     }
 
     override fun onBindViewHolder(h: Holder, position: Int) {
-        val r = position / columns        // номер строки
-        val c = position % columns        // номер колонки (0=левый, 1=правый)
-        val srcIndex = r + c * rows()     // МАГИЯ: индекс из column-major
+        val r = position / columns
+        val c = position % columns
+        val srcIndex = r + c * rows()
 
         val word = words.getOrNull(srcIndex)
         if (word == null) {
-            // если слов не хватает (нечётное число) — прячем ячейку, чтобы сетка не ломалась
             h.itemView.visibility = View.INVISIBLE
         } else {
             h.itemView.visibility = View.VISIBLE
-            h.bind(srcIndex, word)        // srcIndex + 1 = правильный порядковый номер
+            h.bind(srcIndex, word)
         }
     }
 

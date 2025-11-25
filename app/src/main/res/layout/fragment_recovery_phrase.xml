@@ -42,8 +42,6 @@
             app:layout_constraintEnd_toEndOf="parent"/>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-
-    <!-- Контент: предупреждение + список + кнопка -->
     <LinearLayout
         android:id="@+id/contentContainer"
         android:orientation="vertical"
@@ -85,7 +83,6 @@
                 android:fontFamily="@font/inter_semibold"/>
         </LinearLayout>
 
-        <!-- recycler растягивается, заполняя всё оставшееся место -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvWords"
             android:layout_width="match_parent"
@@ -93,7 +90,6 @@
             android:layout_marginBottom="25dp"
             android:layout_marginTop="25dp"/>
 
-        <!-- Copy сразу после списка -->
         <Button
             android:id="@+id/btnCopy"
             android:layout_width="match_parent"
@@ -106,7 +102,6 @@
             android:background="@drawable/btn_green_rounded"/>
     </LinearLayout>
 
-    <!-- Оверлей-предупреждение -->
     <ScrollView
         android:id="@+id/overlay"
         android:layout_width="0dp"

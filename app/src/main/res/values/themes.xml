@@ -12,17 +12,12 @@
     </style>
 
     <style name="DarkFullScreenDialog" parent="Theme.AppCompat.Light.NoActionBar">
-        <!-- Диалог без белого фона -->
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowFullscreen">false</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
-
-        <!-- Убираем белую полосу -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/black</item>
-
-        <!-- Светлые иконки в статус-баре -->
         <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

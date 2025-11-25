@@ -7,20 +7,17 @@
     android:background="@drawable/welcome_bg"
     tools:context=".ui.wallet.WalletActivity">
 
-    <!-- Основной контент (где будут подменяться фрагменты) -->
     <FrameLayout
         android:id="@+id/fragmentContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginBottom="70dp" />
-    <!-- Отступ под нижнюю навигацию -->
 
     <FrameLayout
         android:id="@+id/bottomNavContainer"
         android:layout_width="match_parent"
         android:layout_height="70dp"
         android:layout_gravity="bottom">
-        <!-- Нижняя навигация -->
         <LinearLayout
             android:id="@+id/bottomNav"
             android:layout_width="match_parent"
@@ -109,7 +106,6 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Индикатор активной вкладки -->
         <View
             android:id="@+id/activeIndicator"
             android:layout_width="0dp"
