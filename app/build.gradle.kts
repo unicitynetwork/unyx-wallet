@@ -56,6 +56,22 @@ android {
 }
 
 dependencies {
+    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
+
+    // 2. Убираем явные версии (версии берутся из BOM)
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    // Используем Material3 версии из BOM (это будет 1.2.1)
+    implementation("androidx.compose.material3:material3")
+
+    // УДАЛИТЕ ИЛИ ЗАКОММЕНТИРУЙТЕ ЭТУ СТРОКУ, она тянет версию 1.4.0+, требующую SDK 35
+    // implementation(libs.androidx.material3)
+
+    // Остальные Compose зависимости (версии тоже можно убрать, если они в BOM)
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+
     // Unicity Nostr SDK (includes Nostr client, crypto, nametag binding, token transfer)
     implementation("org.unicitylabs:nostr-sdk:0.0.2")
 
@@ -80,10 +96,7 @@ dependencies {
 
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
-    implementation("androidx.activity:activity-compose:1.8.0")
-    implementation("androidx.compose.ui:ui:1.6.8")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.6.8")
-    implementation("androidx.compose.material3:material3:1.2.1")
+    implementation("androidx.activity:activity-compose:1.8.2")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.10.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
@@ -116,7 +129,6 @@ dependencies {
 
     // Glide for image loading and caching
     implementation("com.github.bumptech.glide:glide:4.16.0")
-    implementation(libs.androidx.material3)
     annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
     kapt("com.github.bumptech.glide:compiler:4.16.0")
 
@@ -171,7 +183,6 @@ dependencies {
 
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.6.8")
 
     // Mockito for testing (Java 8 compatible versions)
     androidTestImplementation("org.mockito:mockito-android:4.11.0")
@@ -179,9 +190,6 @@ dependencies {
 
     // Coroutines test
     androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
-
-    debugImplementation("androidx.compose.ui:ui-tooling:1.6.8")
-    debugImplementation("androidx.compose.ui:ui-test-manifest:1.6.8")
 
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }
