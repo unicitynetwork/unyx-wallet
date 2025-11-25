@@ -58,16 +58,9 @@ android {
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.06.00"))
 
-    // 2. Убираем явные версии (версии берутся из BOM)
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    // Используем Material3 версии из BOM (это будет 1.2.1)
     implementation("androidx.compose.material3:material3")
-
-    // УДАЛИТЕ ИЛИ ЗАКОММЕНТИРУЙТЕ ЭТУ СТРОКУ, она тянет версию 1.4.0+, требующую SDK 35
-    // implementation(libs.androidx.material3)
-
-    // Остальные Compose зависимости (версии тоже можно убрать, если они в BOM)
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
