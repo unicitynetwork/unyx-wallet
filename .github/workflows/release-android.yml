@@ -96,46 +96,44 @@ jobs:
           echo ""
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ github.event.inputs.version }}
-          name: Unyx Wallet v${{ github.event.inputs.version }}
-          body: |
-            # Unyx Wallet v${{ github.event.inputs.version }}
-
-            ${{ github.event.inputs.release_notes }}
-
-            ## Installation
-
-            Download `unyx-wallet-v${{ github.event.inputs.version }}.apk` and install on your Android device.
-
-            **Minimum Android version**: Android 12 (API 31)
-
-            ## Features
-
-            - Offline token transfers via NFC + Bluetooth
-            - Nametag binding for easy addressing
-            - P2P messaging with nearby users
-            - Discover wallet users on map
-            - Phone number-based contact discovery
-            - Secure wallet backup to Google Drive
-
-            ## What's New
-
-            See commit history for detailed changes.
-
-            ---
-
-            **Package**: com.example.unicitywallet
-            **Version**: ${{ github.event.inputs.version }}
-            **Build**: ${{ github.run_number }}
-
-          files: |
-            unyx-wallet-v${{ github.event.inputs.version }}.apk
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          gh release create "v${VERSION}" \
+            --title "Unyx Wallet v${VERSION}" \
+            --notes "$(cat <<'EOF'
+          # Unyx Wallet v${{ github.event.inputs.version }}
+
+          ${{ github.event.inputs.release_notes }}
+
+          ## Installation
+
+          Download `unyx-wallet-v${{ github.event.inputs.version }}.apk` and install on your Android device.
+
+          **Minimum Android version**: Android 12 (API 31)
+
+          ## Features
+
+          - Offline token transfers via NFC + Bluetooth
+          - Nametag binding for easy addressing
+          - P2P messaging with nearby users
+          - Discover wallet users on map
+          - Phone number-based contact discovery
+          - Secure wallet backup to Google Drive
+
+          ## What's New
+
+          See commit history for detailed changes.
+
+          ---
+
+          **Package**: com.example.unicitywallet
+          **Version**: ${{ github.event.inputs.version }}
+          **Build**: ${{ github.run_number }}
+          EOF
+          )" \
+            unyx-wallet-v${VERSION}.apk
 
       - name: Release Summary
         run: |
